@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>학생 생활지도 관리 시스템</title>
-  <!-- Google Sign-In SDK 추가 -->
+  
+  <!-- 구글 로그인 공식 SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
@@ -18,8 +20,9 @@
     .nav-btn-main.active { background-color: #1d4ed8; border: 2px solid #93c5fd; }
     .nav-btn-sheet { background-color: #f39c12; color: white; }
 
-    .user-auth-bar { background-color: #0f172a; color: #cbd5e1; padding: 6px 20px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-    .auth-btn-login { background-color: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .user-auth-bar { background-color: #0f172a; color: #cbd5e1; padding: 8px 20px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .auth-status-container { display: flex; align-items: center; gap: 10px; }
+    .btn-logout { background-color: #64748b; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
 
     .container { max-width: 900px; margin: 24px auto; padding: 0 15px; }
     .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
@@ -58,15 +61,19 @@
     .row-highlight { background-color: #fff1f2; }
     
     .loader { text-align: center; margin-top: 10px; color: #0284c7; font-size: 14px; font-weight: bold; display: none; }
-    .notice-box { background-color: #fffbebf8; border: 1px solid #fef3c7; color: #92400e; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; }
   </style>
 </head>
 <body>
 
-  <!-- 상단 로그인 헤더 -->
+  <!-- 상단 로그인 인증 상태 바 -->
   <div class="user-auth-bar">
-    <span>🔒 <strong>구글 계정 인증:</strong> <span id="userEmailDisplay">로그인되지 않음</span></span>
-    <button class="auth-btn-login" onclick="promptEmailLogin()">🔑 담임 이메일 인증하기</button>
+    <div class="auth-status-container">
+      <span>🔒 <strong>구글 담임 인증:</strong> <span id="userEmailDisplay">로그인 안 됨</span></span>
+      <button id="btnLogout" class="btn-logout" onclick="logoutGoogle()" style="display:none;">로그아웃</button>
+    </div>
+    
+    <!-- 구글 원클릭 로그인 버튼 노출 구역 -->
+    <div id="g_id_signin_btn"></div>
   </div>
 
   <!-- 메인 헤더 -->
@@ -138,10 +145,7 @@
 
     <!-- VIEW 2: 담임용 결과 확인 -->
     <div id="viewResult" class="card" style="display:none;">
-      <div class="notice-box">
-        📌 <strong>담임 결과 확인 안내:</strong> "담임계정" 시트 D열에 등록된 본인의 이메일로 로그인해야 해당 학반의 결과를 확인할 수 있습니다.
-      </div>
-
+      
       <div class="profile-card">
         <div>
           <span class="class-info" id="displayClassCode">학반 선택</span>
@@ -169,10 +173,15 @@
   </div>
 
   <script>
-    // ⚠️ 아래 앱스크립트 배포 URL을 입력하세요.
+    // ⚠️ 1. Google Cloud Console에서 발급받은 OAuth Client ID 입력
+    const GOOGLE_CLIENT_ID = "688501379128-2gc5ocf4am8lrh5vas12ue33vqs0bp1v.apps.googleusercontent.com";
+
+    // ⚠️ 2. 구글 앱스크립트 웹앱 배포 URL 입력
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz9Lbbtqj6a80vusBiQMrmz3jk5qzVTxvNp9ehS-DktAdBlzmg9V_GSGMc6Gu9G2JNG/exec";
 
-    let currentUserEmail = localStorage.getItem("teacher_email") || "";
+    let googleIdToken = localStorage.getItem("google_id_token") || "";
+    let userEmail = localStorage.getItem("google_user_email") || "";
+    
     let globalData = { students: [], violations: [], teacherInfo: null };
     let currentGrade = 1;
     let currentClassNum = 1;
@@ -181,28 +190,77 @@
     let loadedResultData = null;
 
     document.getElementById('dateInput').valueAsDate = new Date();
-    updateUserEmailUI();
 
-    function updateUserEmailUI() {
-      const display = document.getElementById("userEmailDisplay");
-      if (currentUserEmail) {
-        display.innerHTML = `<strong>${currentUserEmail}</strong>`;
-      } else {
-        display.innerText = "로그인되지 않음 (클릭하여 이메일 입력)";
+    // 페이지 로드 시 구글 로그인 SDK 초기화
+    window.onload = function() {
+      initGoogleAuth();
+      updateAuthUI();
+      initData();
+    };
+
+    function initGoogleAuth() {
+      if (typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse
+        });
+
+        // 상단 구글 로그인 버튼 렌더링
+        google.accounts.id.renderButton(
+          document.getElementById("g_id_signin_btn"),
+          { theme: "outline", size: "medium", text: "signin_with" }
+        );
       }
     }
 
-    function promptEmailLogin() {
-      const email = prompt("담임계정 시트 D열에 등록된 이메일 주소를 입력하세요:", currentUserEmail);
-      if (email !== null) {
-        currentUserEmail = email.trim().toLowerCase();
-        localStorage.setItem("teacher_email", currentUserEmail);
-        updateUserEmailUI();
-        // 초기 데이터 재요청 및 화면 갱신
+    // 구글 로그인 성공 시 콜백 함수
+    async function handleCredentialResponse(response) {
+      googleIdToken = response.credential;
+      
+      // 토큰 검증 요청
+      const res = await callApi("verifyLogin");
+      if (res && res.success) {
+        userEmail = res.email;
+        localStorage.setItem("google_id_token", googleIdToken);
+        localStorage.setItem("google_user_email", userEmail);
+        
+        updateAuthUI();
+        alert(`Google 계정(${userEmail}) 인증이 완료되었습니다.`);
+        
         initData();
         if (document.getElementById('viewResult').style.display !== 'none') {
           loadResultData();
         }
+      } else {
+        alert(res ? res.message : "구글 로그인 인증에 실패했습니다.");
+      }
+    }
+
+    function logoutGoogle() {
+      googleIdToken = "";
+      userEmail = "";
+      localStorage.removeItem("google_id_token");
+      localStorage.removeItem("google_user_email");
+      updateAuthUI();
+      alert("로그아웃되었습니다.");
+      if (document.getElementById('viewResult').style.display !== 'none') {
+        loadResultData();
+      }
+    }
+
+    function updateAuthUI() {
+      const display = document.getElementById("userEmailDisplay");
+      const logoutBtn = document.getElementById("btnLogout");
+      const signinBtn = document.getElementById("g_id_signin_btn");
+
+      if (userEmail && googleIdToken) {
+        display.innerHTML = `<strong style="color:#38bdf8;">${userEmail}</strong> (인증됨)`;
+        logoutBtn.style.display = "inline-block";
+        signinBtn.style.display = "none";
+      } else {
+        display.innerText = "로그인 안 됨";
+        logoutBtn.style.display = "none";
+        signinBtn.style.display = "block";
       }
     }
 
@@ -214,7 +272,7 @@
       try {
         const response = await fetch(GAS_WEB_APP_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: action, userEmail: currentUserEmail, ...payload })
+          body: JSON.stringify({ action: action, idToken: googleIdToken, ...payload })
         });
         return await response.json();
       } catch (error) {
@@ -222,10 +280,6 @@
         return { success: false, message: "서버 통신 오류가 발생했습니다." };
       }
     }
-
-    window.onload = function() {
-      initData();
-    };
 
     async function initData() {
       const data = await callApi("getInitialData");
@@ -243,9 +297,6 @@
       setupTeacherInfo(data.teacherInfo);
     }
 
-    // ----------------------------------------------------
-    // 입력 화면 로직
-    // ----------------------------------------------------
     function populateGrades() {
       const gradeSelect = document.getElementById('grade');
       const grades = [...new Set(globalData.students.map(s => s.grade))].sort((a,b) => a - b);
@@ -375,9 +426,6 @@
       }
     }
 
-    // ----------------------------------------------------
-    // 결과 확인 화면 및 이메일 매칭 권한 로직
-    // ----------------------------------------------------
     function setupTeacherInfo(info) {
       if(!info || !info.classList) return;
 
@@ -400,7 +448,6 @@
         select.appendChild(opt);
       });
 
-      // 내 로그인 이메일과 일치하는 학반이 존재할 경우 자동 선택
       if (myClassFound) {
         select.value = `${myClassFound.grade}-${myClassFound.classNum}`;
         currentGrade = myClassFound.grade;
@@ -428,11 +475,7 @@
         document.getElementById('btnNavInput').classList.remove('active');
         document.getElementById('btnNavResult').classList.add('active');
         
-        if (!currentUserEmail) {
-          promptEmailLogin();
-        } else {
-          loadResultData();
-        }
+        loadResultData();
       }
     }
 
@@ -453,7 +496,7 @@
     }
 
     async function loadResultData(targetMonth) {
-      document.getElementById("tableContent").innerHTML = '<div style="text-align:center; padding:30px;">데이터 및 접근 권한을 확인하는 중입니다...</div>';
+      document.getElementById("tableContent").innerHTML = '<div style="text-align:center; padding:30px;">구글 인증 상태 및 담임 권한을 확인하는 중입니다...</div>';
       const data = await callApi("getClassViolationData", {
         grade: currentGrade,
         classNum: currentClassNum,
@@ -469,8 +512,6 @@
         document.getElementById("tableContent").innerHTML = `
           <div style="text-align:center; padding:40px; color:#e11d48; font-weight:bold; font-size:15px; background:#fff1f2; border-radius:8px; border:1px solid #fecdd3;">
             ${data ? data.error : "권한 확인 중 오류가 발생했습니다."}
-            <br><br>
-            <button onclick="promptEmailLogin()" style="padding:8px 16px; background:#0284c7; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">🔑 다른 이메일로 인증하기</button>
           </div>`;
         return;
       }
@@ -479,7 +520,6 @@
       currentMonth = data.currentSheet;
       document.getElementById("sheetLink").href = data.spreadsheetUrl;
 
-      // 월 탭 생성
       const monthTabsEl = document.getElementById("monthTabs");
       monthTabsEl.innerHTML = "";
       data.monthSheets.forEach(m => {
@@ -490,7 +530,6 @@
         monthTabsEl.appendChild(btn);
       });
 
-      // 일자 탭 생성
       const dateTabsEl = document.getElementById("dateTabs");
       dateTabsEl.innerHTML = "";
 
