@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>학생 생활지도 관리 시스템</title>
@@ -9,7 +8,6 @@
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
     
-    /* 상단 네비게이션 헤더 */
     .header { background-color: #1e293b; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     .header h1 { margin: 0; font-size: 18px; font-weight: bold; }
     .nav-btn-group { display: flex; gap: 8px; }
@@ -22,7 +20,6 @@
     .container { max-width: 900px; margin: 24px auto; padding: 0 15px; }
     .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
     
-    /* 입력 폼 스타일 */
     .form-group { margin-bottom: 15px; }
     label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
     select, input[type="text"], input[type="date"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; }
@@ -39,7 +36,6 @@
     .btn-delete:hover { background-color: #c0392b; }
     #etcField { display: none; margin-top: 10px; }
     
-    /* 프로필 카드 및 탭 스타일 */
     .profile-card { background: #e0f2fe; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-left: 5px solid #0284c7; }
     .class-info { font-size: 18px; font-weight: bold; color: #0369a1; }
     
@@ -50,7 +46,6 @@
     .summary-tab { background: #f59e0b !important; color: white !important; }
     .summary-tab.active { background: #d97706 !important; }
 
-    /* 결과 테이블 스타일 */
     .table-responsive { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
     th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: center; }
@@ -63,9 +58,9 @@
 </head>
 <body>
 
-  <!-- 상단 네비게이션 헤더 -->
+  <!-- 상단 헤더 -->
   <div class="header">
-    <h1>📝 생활지도 시스템</h1>
+    <h1>📝 학생 생활지도 관리 시스템</h1>
     <div class="nav-btn-group">
       <button id="btnNavInput" class="nav-btn nav-btn-main active" onclick="switchView('input')">✏️ 위반 사항 입력</button>
       <button id="btnNavResult" class="nav-btn nav-btn-main" onclick="switchView('result')">📋 담임용 결과 확인</button>
@@ -75,7 +70,7 @@
 
   <div class="container">
     
-    <!-- ================= VIEW 1: 위반 사항 입력 섹션 ================= -->
+    <!-- VIEW 1: 위반 사항 입력 -->
     <div id="viewInput" class="card">
       <h2 style="margin-top:0; text-align:center;">위반 사항 입력</h2>
       
@@ -84,7 +79,7 @@
         <input type="date" id="dateInput" required>
       </div>
 
-      <div id="dataLoader" style="text-align:center; color:#0284c7; font-weight:bold; margin-bottom:15px;">⏳ 데이터를 불러오는 중...</div>
+      <div id="dataLoader" style="text-align:center; color:#0284c7; font-weight:bold; margin-bottom:15px;">⏳ 구글 시트 데이터 연결 중...</div>
       
       <div style="display: flex; gap: 10px; margin-bottom: 15px;">
         <div style="flex:1;">
@@ -130,31 +125,27 @@
       <div id="loader" class="loader">구글 시트로 전송 중입니다... ⏳</div>
     </div>
 
-    <!-- ================= VIEW 2: 담임용 결과 확인 섹션 ================= -->
+    <!-- VIEW 2: 담임용 결과 확인 -->
     <div id="viewResult" class="card" style="display:none;">
-      <!-- 학반 정보 카드 -->
       <div class="profile-card">
         <div>
-          <span class="class-info" id="displayClassCode">조회 중...</span>
+          <span class="class-info" id="displayClassCode">학반 선택</span>
           <span style="font-size:13px; color:#555;" id="displayTeacherName"></span>
         </div>
-        <div id="adminClassSelector" style="display:none;">
-          <label style="font-size:12px; font-weight:bold;">학반 선택: </label>
+        <div id="adminClassSelector">
+          <label style="font-size:12px; font-weight:bold;">조회 학반: </label>
           <select id="classSelect" onchange="changeClass()" style="width:auto; padding:4px;"></select>
         </div>
       </div>
 
-      <!-- 1차 탭: 월 선택 -->
       <div class="tabs-container">
         <div class="tab-group" id="monthTabs"></div>
       </div>
 
-      <!-- 2차 탭: 일자 선택 및 위반 사례별 합계 -->
       <div class="tabs-container">
         <div class="tab-group" id="dateTabs"></div>
       </div>
 
-      <!-- 결과 데이터 테이블 -->
       <div id="tableContent">
         <div style="text-align:center; padding:30px; color:#666;">데이터를 불러오는 중입니다...</div>
       </div>
@@ -163,6 +154,9 @@
   </div>
 
   <script>
+    // ⚠️ 아래 큰따옴표 안에 본인의 Apps Script 웹앱 URL을 입력하세요.
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz9Lbbtqj6a80vusBiQMrmz3jk5qzVTxvNp9ehS-DktAdBlzmg9V_GSGMc6Gu9G2JNG/exec";
+
     let globalData = { students: [], violations: [], teacherInfo: null };
     let currentGrade = 1;
     let currentClassNum = 1;
@@ -172,8 +166,31 @@
 
     document.getElementById('dateInput').valueAsDate = new Date();
 
-    window.onload = function() {
-      google.script.run.withSuccessHandler(onInitialDataLoaded).getInitialData();
+    // ----------------------------------------------------
+    // API 통신 함수 (fetch 기반)
+    // ----------------------------------------------------
+    async function callApi(action, payload = {}) {
+      if (GAS_WEB_APP_URL.includes("여기에_앱스크립트")) {
+        alert("index.html 파일 상단의 GAS_WEB_APP_URL 변수에 배포된 웹 앱 URL을 지정해 주세요.");
+        return { success: false, message: "URL 미설정" };
+      }
+      try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: action, ...payload })
+        });
+        return await response.json();
+      } catch (error) {
+        console.error("API Call Error:", error);
+        return { success: false, message: "서버와 통신 중 오류가 발생했습니다." };
+      }
+    }
+
+    window.onload = async function() {
+      const data = await callApi("getInitialData");
+      if (data && data.students) {
+        onInitialDataLoaded(data);
+      }
     };
 
     function onInitialDataLoaded(data) {
@@ -186,7 +203,7 @@
     }
 
     // ----------------------------------------------------
-    // 입력 화면 컨트롤 로직
+    // 입력 화면 로직
     // ----------------------------------------------------
     function populateGrades() {
       const gradeSelect = document.getElementById('grade');
@@ -252,7 +269,7 @@
       if (!isEtcChecked) etcField.value = "";
     }
 
-    function submitAction(actionType) {
+    async function submitAction(actionType) {
       const dateRaw = document.getElementById("dateInput").value;
       const grade = document.getElementById("grade").value;
       const classNum = document.getElementById("classNum").value;
@@ -303,42 +320,42 @@
 
       document.getElementById("loader").style.display = "block";
 
-      google.script.run.withSuccessHandler(function(res) {
-        document.getElementById("loader").style.display = "none";
-        if(res.success) {
-          alert(res.message || "성공적으로 처리되었습니다.");
-          const checkboxes = document.getElementsByName('violationCheckbox');
-          for(let i = 0; i < checkboxes.length; i++) checkboxes[i].checked = false;
-          toggleEtcField();
-          document.getElementById("student").value = "";
-        } else {
-          alert("처리 실패: " + res.message);
-        }
-      }).submitViolation(payload);
+      const res = await callApi("submitViolation", { payload: payload });
+      document.getElementById("loader").style.display = "none";
+
+      if(res.success) {
+        alert(res.message || "성공적으로 처리되었습니다.");
+        const checkboxes = document.getElementsByName('violationCheckbox');
+        for(let i = 0; i < checkboxes.length; i++) checkboxes[i].checked = false;
+        toggleEtcField();
+        document.getElementById("student").value = "";
+      } else {
+        alert("처리 실패: " + res.message);
+      }
     }
 
     // ----------------------------------------------------
-    // 담임용 결과 확인 로직
+    // 결과 확인 화면 로직
     // ----------------------------------------------------
     function setupTeacherInfo(info) {
       if(!info) return;
-      currentGrade = info.grade;
-      currentClassNum = info.classNum;
 
-      document.getElementById("displayClassCode").innerText = `${info.grade}학년 ${info.classNum}반 결과`;
-      document.getElementById("displayTeacherName").innerText = ` (담임: ${info.teacherName} 선생님)`;
-
-      if(info.isAdmin && info.classList && info.classList.length > 0) {
+      if(info.classList && info.classList.length > 0) {
         const select = document.getElementById("classSelect");
         select.innerHTML = "";
         info.classList.forEach(c => {
           const opt = document.createElement("option");
           opt.value = c.classCode;
           opt.innerText = `${c.classCode}반 (${c.teacherName})`;
-          if(c.classCode === info.classCode) opt.selected = true;
           select.appendChild(opt);
         });
-        document.getElementById("adminClassSelector").style.display = "block";
+
+        // 첫번째 반을 기본값으로 설정
+        const firstParts = info.classList[0].classCode.split("-");
+        currentGrade = parseInt(firstParts[0]);
+        currentClassNum = parseInt(firstParts[1]);
+        document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
+        document.getElementById("displayTeacherName").innerText = ` (담임: ${info.classList[0].teacherName} 선생님)`;
       }
     }
 
@@ -359,22 +376,31 @@
     }
 
     function changeClass() {
-      const val = document.getElementById("classSelect").value;
+      const select = document.getElementById("classSelect");
+      const val = select.value;
+      const text = select.options[select.selectedIndex].text;
       const parts = val.split("-");
       currentGrade = parseInt(parts[0]);
       currentClassNum = parseInt(parts[1]);
+      
       document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
+      document.getElementById("displayTeacherName").innerText = ` (${text.split(" ")[1]} 선생님)`;
       loadResultData(currentMonth);
     }
 
-    function loadResultData(targetMonth) {
+    async function loadResultData(targetMonth) {
       document.getElementById("tableContent").innerHTML = '<div style="text-align:center; padding:30px;">데이터를 불러오는 중입니다...</div>';
-      google.script.run.withSuccessHandler(onResultDataLoaded).getClassViolationData(currentGrade, currentClassNum, targetMonth);
+      const data = await callApi("getClassViolationData", {
+        grade: currentGrade,
+        classNum: currentClassNum,
+        targetMonthSheet: targetMonth
+      });
+      onResultDataLoaded(data);
     }
 
     function onResultDataLoaded(data) {
-      if(data.error) {
-        document.getElementById("tableContent").innerHTML = `<div style="text-align:center; padding:30px; color:red;">${data.error}</div>`;
+      if(!data || data.error) {
+        document.getElementById("tableContent").innerHTML = `<div style="text-align:center; padding:30px; color:red;">${data ? data.error : "오류가 발생했습니다."}</div>`;
         return;
       }
       loadedResultData = data;
@@ -396,14 +422,12 @@
       const dateTabsEl = document.getElementById("dateTabs");
       dateTabsEl.innerHTML = "";
 
-      // '월별 위반 사례별 합계' 탭
       const summaryBtn = document.createElement("button");
       summaryBtn.className = `tab-item summary-tab ${currentDate === 'SUMMARY' ? 'active' : ''}`;
       summaryBtn.innerText = "📊 월별 위반 사례별 합계";
       summaryBtn.onclick = () => selectDateTab('SUMMARY');
       dateTabsEl.appendChild(summaryBtn);
 
-      // 일자별 탭
       if (data.dates && data.dates.length > 0) {
         if(!currentDate || currentDate === 'SUMMARY' || !data.dates.includes(currentDate)) {
           currentDate = data.dates[0];
