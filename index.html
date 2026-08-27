@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>학생 생활지도 관리 시스템</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
+    
+    /* 상단 네비게이션 헤더 */
+    .header { background-color: #1e293b; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .header h1 { margin: 0; font-size: 18px; font-weight: bold; }
+    .nav-btn-group { display: flex; gap: 8px; }
+    .nav-btn { padding: 8px 14px; border-radius: 6px; border: none; font-size: 14px; font-weight: bold; cursor: pointer; text-decoration: none; transition: 0.3s; }
+    .nav-btn-main { background-color: #3b82f6; color: white; }
+    .nav-btn-main.active { background-color: #1d4ed8; border: 2px solid #93c5fd; }
+    .nav-btn-sheet { background-color: #f39c12; color: white; }
+    .nav-btn-sheet:hover { background-color: #e67e22; }
+
+    .container { max-width: 900px; margin: 24px auto; padding: 0 15px; }
+    .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    
+    /* 입력 폼 스타일 */
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
+    select, input[type="text"], input[type="date"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; }
+    
+    .checkbox-container { border: 1px solid #ccc; border-radius: 4px; padding: 10px; max-height: 160px; overflow-y: auto; background-color: #fff; }
+    .checkbox-label { display: block; margin-bottom: 8px; font-weight: normal; color: #333; cursor: pointer; font-size: 15px; }
+    .checkbox-label input { margin-right: 10px; transform: scale(1.2); cursor: pointer; }
+    
+    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+    .btn { flex: 1; padding: 12px; color: white; border: none; border-radius: 4px; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+    .btn-submit { background-color: #4CAF50; }
+    .btn-submit:hover { background-color: #45a049; }
+    .btn-delete { background-color: #e74c3c; }
+    .btn-delete:hover { background-color: #c0392b; }
+    #etcField { display: none; margin-top: 10px; }
+    
+    /* 프로필 카드 및 탭 스타일 */
+    .profile-card { background: #e0f2fe; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-left: 5px solid #0284c7; }
+    .class-info { font-size: 18px; font-weight: bold; color: #0369a1; }
+    
+    .tabs-container { margin-bottom: 15px; }
+    .tab-group { display: flex; gap: 6px; border-bottom: 2px solid #cbd5e1; padding-bottom: 2px; overflow-x: auto; }
+    .tab-item { padding: 8px 14px; background: #e2e8f0; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 13px; color: #475569; white-space: nowrap; }
+    .tab-item.active { background: #0284c7; color: white; }
+    .summary-tab { background: #f59e0b !important; color: white !important; }
+    .summary-tab.active { background: #d97706 !important; }
+
+    /* 결과 테이블 스타일 */
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: center; }
+    th { background-color: #f1f5f9; color: #334155; font-weight: 600; }
+    .badge-violation { background-color: #fee2e2; color: #991b1b; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-block; }
+    .row-highlight { background-color: #fff1f2; }
+    
+    .loader { text-align: center; margin-top: 10px; color: #0284c7; font-size: 14px; font-weight: bold; display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- 상단 네비게이션 헤더 -->
+  <div class="header">
+    <h1>📝 생활지도 시스템</h1>
+    <div class="nav-btn-group">
+      <button id="btnNavInput" class="nav-btn nav-btn-main active" onclick="switchView('input')">✏️ 위반 사항 입력</button>
+      <button id="btnNavResult" class="nav-btn nav-btn-main" onclick="switchView('result')">📋 담임용 결과 확인</button>
+      <a id="sheetLink" href="#" target="_blank" class="nav-btn nav-btn-sheet">⚙️ 관리자 시트 접속</a>
+    </div>
+  </div>
+
+  <div class="container">
+    
+    <!-- ================= VIEW 1: 위반 사항 입력 섹션 ================= -->
+    <div id="viewInput" class="card">
+      <h2 style="margin-top:0; text-align:center;">위반 사항 입력</h2>
+      
+      <div class="form-group">
+        <label>날짜</label>
+        <input type="date" id="dateInput" required>
+      </div>
+
+      <div id="dataLoader" style="text-align:center; color:#0284c7; font-weight:bold; margin-bottom:15px;">⏳ 데이터를 불러오는 중...</div>
+      
+      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <div style="flex:1;">
+          <label>학년</label>
+          <select id="grade" onchange="updateClassDropdown()" disabled><option value="">불러오는 중...</option></select>
+        </div>
+        <div style="flex:1;">
+          <label>반</label>
+          <select id="classNum" onchange="updateStudentDropdown()" disabled><option value="">선택</option></select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>학생 이름 (번호)</label>
+        <select id="student" disabled><option value="">선택</option></select>
+      </div>
+
+      <div class="form-group">
+        <label>교시</label>
+        <select id="period">
+          <option value="조례">조례</option>
+          <option value="1교시" selected>1교시</option>
+          <option value="2교시">2교시</option>
+          <option value="3교시">3교시</option>
+          <option value="4교시">4교시</option>
+          <option value="5교시">5교시</option>
+          <option value="6교시">6교시</option>
+          <option value="7교시">7교시</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>위반 사항 <span style="font-size: 12px; color: #ff3333; font-weight: normal;">(다중 선택 가능)</span></label>
+        <div id="violationContainer" class="checkbox-container">불러오는 중...</div>
+        <input type="text" id="etcField" placeholder="기타 사유를 입력하세요 (예: 떠듦)">
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-submit" onclick="submitAction('insert')">✅ 입력하기</button>
+        <button class="btn btn-delete" onclick="submitAction('delete')">🗑️ 입력 취소 (삭제)</button>
+      </div>
+      
+      <div id="loader" class="loader">구글 시트로 전송 중입니다... ⏳</div>
+    </div>
+
+    <!-- ================= VIEW 2: 담임용 결과 확인 섹션 ================= -->
+    <div id="viewResult" class="card" style="display:none;">
+      <!-- 학반 정보 카드 -->
+      <div class="profile-card">
+        <div>
+          <span class="class-info" id="displayClassCode">조회 중...</span>
+          <span style="font-size:13px; color:#555;" id="displayTeacherName"></span>
+        </div>
+        <div id="adminClassSelector" style="display:none;">
+          <label style="font-size:12px; font-weight:bold;">학반 선택: </label>
+          <select id="classSelect" onchange="changeClass()" style="width:auto; padding:4px;"></select>
+        </div>
+      </div>
+
+      <!-- 1차 탭: 월 선택 -->
+      <div class="tabs-container">
+        <div class="tab-group" id="monthTabs"></div>
+      </div>
+
+      <!-- 2차 탭: 일자 선택 및 위반 사례별 합계 -->
+      <div class="tabs-container">
+        <div class="tab-group" id="dateTabs"></div>
+      </div>
+
+      <!-- 결과 데이터 테이블 -->
+      <div id="tableContent">
+        <div style="text-align:center; padding:30px; color:#666;">데이터를 불러오는 중입니다...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let globalData = { students: [], violations: [], teacherInfo: null };
+    let currentGrade = 1;
+    let currentClassNum = 1;
+    let currentMonth = "";
+    let currentDate = "";
+    let loadedResultData = null;
+
+    document.getElementById('dateInput').valueAsDate = new Date();
+
+    window.onload = function() {
+      google.script.run.withSuccessHandler(onInitialDataLoaded).getInitialData();
+    };
+
+    function onInitialDataLoaded(data) {
+      globalData = data;
+      document.getElementById('dataLoader').style.display = 'none';
+      
+      populateGrades();
+      populateViolations(data.violations);
+      setupTeacherInfo(data.teacherInfo);
+    }
+
+    // ----------------------------------------------------
+    // 입력 화면 컨트롤 로직
+    // ----------------------------------------------------
+    function populateGrades() {
+      const gradeSelect = document.getElementById('grade');
+      const grades = [...new Set(globalData.students.map(s => s.grade))].sort((a,b) => a - b);
+      gradeSelect.innerHTML = '<option value="">학년 선택</option>';
+      grades.forEach(g => gradeSelect.innerHTML += `<option value="${g}">${g}학년</option>`);
+      gradeSelect.disabled = false;
+    }
+
+    function updateClassDropdown() {
+      const selectedGrade = document.getElementById('grade').value;
+      const classSelect = document.getElementById('classNum');
+      const studentSelect = document.getElementById('student');
+      classSelect.innerHTML = '<option value="">반 선택</option>';
+      studentSelect.innerHTML = '<option value="">학생 선택</option>';
+      studentSelect.disabled = true;
+
+      if (selectedGrade) {
+        const classes = [...new Set(globalData.students.filter(s => s.grade == selectedGrade).map(s => s.classNum))].sort((a,b) => a - b);
+        classes.forEach(c => classSelect.innerHTML += `<option value="${c}">${c}반</option>`);
+        classSelect.disabled = false;
+      } else {
+        classSelect.disabled = true;
+      }
+    }
+
+    function updateStudentDropdown() {
+      const selectedGrade = document.getElementById('grade').value;
+      const selectedClass = document.getElementById('classNum').value;
+      const studentSelect = document.getElementById('student');
+      studentSelect.innerHTML = '<option value="">학생 선택</option>';
+
+      if (selectedGrade && selectedClass) {
+        const students = globalData.students.filter(s => s.grade == selectedGrade && s.classNum == selectedClass).sort((a,b) => a.num - b.num);
+        students.forEach(s => studentSelect.innerHTML += `<option value="${s.num}">${s.num}번 ${s.name}</option>`);
+        studentSelect.disabled = false;
+      } else {
+        studentSelect.disabled = true;
+      }
+    }
+
+    function populateViolations(violations) {
+      const vContainer = document.getElementById('violationContainer');
+      vContainer.innerHTML = '';
+      violations.forEach(v => {
+        vContainer.innerHTML += `
+          <label class="checkbox-label">
+            <input type="checkbox" name="violationCheckbox" value="${v}" onchange="toggleEtcField()"> ${v}
+          </label>`;
+      });
+    }
+
+    function toggleEtcField() {
+      const checkboxes = document.getElementsByName('violationCheckbox');
+      const etcField = document.getElementById('etcField');
+      let isEtcChecked = false;
+      for(let i = 0; i < checkboxes.length; i++) {
+        if (checkboxes[i].checked && checkboxes[i].value.includes("기타")) {
+          isEtcChecked = true; break;
+        }
+      }
+      etcField.style.display = isEtcChecked ? "block" : "none";
+      if (!isEtcChecked) etcField.value = "";
+    }
+
+    function submitAction(actionType) {
+      const dateRaw = document.getElementById("dateInput").value;
+      const grade = document.getElementById("grade").value;
+      const classNum = document.getElementById("classNum").value;
+      const num = document.getElementById("student").value;
+      const period = document.getElementById("period").value;
+      
+      if (!dateRaw) return alert("날짜를 선택해주세요.");
+      if (!grade || !classNum || !num) return alert("학년, 반, 학생을 정확히 선택해주세요.");
+
+      const payload = {
+        action: actionType,
+        grade: grade,
+        classNum: classNum,
+        num: num,
+        period: period
+      };
+
+      const d = new Date(dateRaw);
+      payload.date = ('0' + (d.getMonth() + 1)).slice(-2) + '. ' + ('0' + d.getDate()).slice(-2) + '.'; 
+
+      if (actionType === 'insert') {
+        const checkboxes = document.getElementsByName('violationCheckbox');
+        let selectedViolations = [];
+        let hasEtc = false;
+        
+        for(let i = 0; i < checkboxes.length; i++) {
+          if(checkboxes[i].checked) {
+            let val = checkboxes[i].value;
+            if(val.includes("기타")) hasEtc = true;
+            selectedViolations.push(val);
+          }
+        }
+        const etcDetail = document.getElementById("etcField").value;
+
+        if (selectedViolations.length === 0) return alert("위반 사항을 1개 이상 선택해주세요.");
+        if (hasEtc && !etcDetail.trim()) return alert("기타 상세 사유를 입력해주세요.");
+
+        if(hasEtc) {
+          for(let i = 0; i < selectedViolations.length; i++) {
+            if(selectedViolations[i].includes("기타")) selectedViolations[i] = `기타(${etcDetail.trim()})`;
+          }
+        }
+        payload.violation = selectedViolations.join(", ");
+      } 
+      else if (actionType === 'delete') {
+        if (!confirm(`해당 학생의 [${period}] 기록을 완전히 삭제하시겠습니까?`)) return;
+      }
+
+      document.getElementById("loader").style.display = "block";
+
+      google.script.run.withSuccessHandler(function(res) {
+        document.getElementById("loader").style.display = "none";
+        if(res.success) {
+          alert(res.message || "성공적으로 처리되었습니다.");
+          const checkboxes = document.getElementsByName('violationCheckbox');
+          for(let i = 0; i < checkboxes.length; i++) checkboxes[i].checked = false;
+          toggleEtcField();
+          document.getElementById("student").value = "";
+        } else {
+          alert("처리 실패: " + res.message);
+        }
+      }).submitViolation(payload);
+    }
+
+    // ----------------------------------------------------
+    // 담임용 결과 확인 로직
+    // ----------------------------------------------------
+    function setupTeacherInfo(info) {
+      if(!info) return;
+      currentGrade = info.grade;
+      currentClassNum = info.classNum;
+
+      document.getElementById("displayClassCode").innerText = `${info.grade}학년 ${info.classNum}반 결과`;
+      document.getElementById("displayTeacherName").innerText = ` (담임: ${info.teacherName} 선생님)`;
+
+      if(info.isAdmin && info.classList && info.classList.length > 0) {
+        const select = document.getElementById("classSelect");
+        select.innerHTML = "";
+        info.classList.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c.classCode;
+          opt.innerText = `${c.classCode}반 (${c.teacherName})`;
+          if(c.classCode === info.classCode) opt.selected = true;
+          select.appendChild(opt);
+        });
+        document.getElementById("adminClassSelector").style.display = "block";
+      }
+    }
+
+    function switchView(viewName) {
+      if(viewName === 'input') {
+        document.getElementById('viewInput').style.display = 'block';
+        document.getElementById('viewResult').style.display = 'none';
+        document.getElementById('btnNavInput').classList.add('active');
+        document.getElementById('btnNavResult').classList.remove('active');
+      } else {
+        document.getElementById('viewInput').style.display = 'none';
+        document.getElementById('viewResult').style.display = 'block';
+        document.getElementById('btnNavInput').classList.remove('active');
+        document.getElementById('btnNavResult').classList.add('active');
+        
+        loadResultData();
+      }
+    }
+
+    function changeClass() {
+      const val = document.getElementById("classSelect").value;
+      const parts = val.split("-");
+      currentGrade = parseInt(parts[0]);
+      currentClassNum = parseInt(parts[1]);
+      document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
+      loadResultData(currentMonth);
+    }
+
+    function loadResultData(targetMonth) {
+      document.getElementById("tableContent").innerHTML = '<div style="text-align:center; padding:30px;">데이터를 불러오는 중입니다...</div>';
+      google.script.run.withSuccessHandler(onResultDataLoaded).getClassViolationData(currentGrade, currentClassNum, targetMonth);
+    }
+
+    function onResultDataLoaded(data) {
+      if(data.error) {
+        document.getElementById("tableContent").innerHTML = `<div style="text-align:center; padding:30px; color:red;">${data.error}</div>`;
+        return;
+      }
+      loadedResultData = data;
+      currentMonth = data.currentSheet;
+      document.getElementById("sheetLink").href = data.spreadsheetUrl;
+
+      // 월 탭 생성
+      const monthTabsEl = document.getElementById("monthTabs");
+      monthTabsEl.innerHTML = "";
+      data.monthSheets.forEach(m => {
+        const btn = document.createElement("button");
+        btn.className = `tab-item ${m === currentMonth ? 'active' : ''}`;
+        btn.innerText = m;
+        btn.onclick = () => loadResultData(m);
+        monthTabsEl.appendChild(btn);
+      });
+
+      // 일자 및 합계 탭 생성
+      const dateTabsEl = document.getElementById("dateTabs");
+      dateTabsEl.innerHTML = "";
+
+      // '월별 위반 사례별 합계' 탭
+      const summaryBtn = document.createElement("button");
+      summaryBtn.className = `tab-item summary-tab ${currentDate === 'SUMMARY' ? 'active' : ''}`;
+      summaryBtn.innerText = "📊 월별 위반 사례별 합계";
+      summaryBtn.onclick = () => selectDateTab('SUMMARY');
+      dateTabsEl.appendChild(summaryBtn);
+
+      // 일자별 탭
+      if (data.dates && data.dates.length > 0) {
+        if(!currentDate || currentDate === 'SUMMARY' || !data.dates.includes(currentDate)) {
+          currentDate = data.dates[0];
+        }
+        data.dates.forEach(d => {
+          const btn = document.createElement("button");
+          btn.className = `tab-item ${d === currentDate ? 'active' : ''}`;
+          btn.innerText = d;
+          btn.onclick = () => selectDateTab(d);
+          dateTabsEl.appendChild(btn);
+        });
+      }
+
+      renderResultTable();
+    }
+
+    function selectDateTab(dateKey) {
+      currentDate = dateKey;
+      const btns = document.querySelectorAll("#dateTabs .tab-item");
+      btns.forEach(b => {
+        if((dateKey === 'SUMMARY' && b.innerText.includes("합계")) || b.innerText === dateKey) {
+          b.classList.add("active");
+        } else {
+          b.classList.remove("active");
+        }
+      });
+      renderResultTable();
+    }
+
+    function renderResultTable() {
+      const container = document.getElementById("tableContent");
+
+      if (currentDate === 'SUMMARY') {
+        const summary = loadedResultData.monthlySummary;
+        const keys = Object.keys(summary);
+
+        if(keys.length === 0) {
+          container.innerHTML = "<p style='text-align:center; padding: 20px;'>🎉 해당 월에는 위반 사례가 없습니다.</p>";
+          return;
+        }
+
+        let html = `<h3 style="margin-top:5px;">📌 ${currentMonth} 위반 사례별 총 집계</h3>`;
+        html += `<div class="table-responsive"><table><thead><tr>
+                  <th>위반 항목</th>
+                  <th>총 발생 건수</th>
+                  <th>대상 학생 및 횟수</th>
+                 </tr></thead><tbody>`;
+
+        keys.forEach(k => {
+          const item = summary[k];
+          const studentListStr = Object.keys(item.students)
+            .map(sName => `${sName}(${item.students[sName]}회)`)
+            .join(", ");
+
+          html += `<tr>
+                    <td><strong>${k}</strong></td>
+                    <td><span class="badge-violation">${item.total}건</span></td>
+                    <td style="text-align:left;">${studentListStr}</td>
+                   </tr>`;
+        });
+        html += "</tbody></table></div>";
+        container.innerHTML = html;
+
+      } else {
+        const list = loadedResultData.dailyData[currentDate] || [];
+        if(list.length === 0) {
+          container.innerHTML = "<p style='text-align:center; padding: 20px;'>해당 일자의 학생 데이터가 없습니다.</p>";
+          return;
+        }
+
+        let html = `<div class="table-responsive"><table><thead><tr>
+                  <th style="width:40px;">번호</th>
+                  <th style="width:80px;">이름</th>
+                  <th>조례</th><th>1교시</th><th>2교시</th><th>3교시</th>
+                  <th>4교시</th><th>5교시</th><th>6교시</th><th>7교시</th>
+                 </tr></thead><tbody>`;
+
+        list.forEach(s => {
+          const trClass = s.hasViolation ? "row-highlight" : "";
+          html += `<tr class="${trClass}">
+                    <td>${s.num}</td>
+                    <td><strong>${s.name}</strong></td>`;
+          
+          ["조례","1교시","2교시","3교시","4교시","5교시","6교시","7교시"].forEach(p => {
+            const v = s.periods[p];
+            if(v) {
+              html += `<td><span class="badge-violation">${v}</span></td>`;
+            } else {
+              html += `<td style="color:#d1d5db;">-</td>`;
+            }
+          });
+          html += `</tr>`;
+        });
+
+        html += "</tbody></table></div>";
+        container.innerHTML = html;
+      }
+    }
+  </script>
+</body>
+</html>
