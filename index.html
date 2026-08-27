@@ -4,18 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>학생 생활지도 관리 시스템</title>
+  <!-- Google Sign-In SDK 추가 -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
     
-    .header { background-color: #1e293b; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .header { background-color: #1e293b; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 10px; }
     .header h1 { margin: 0; font-size: 18px; font-weight: bold; }
-    .nav-btn-group { display: flex; gap: 8px; }
+    .nav-btn-group { display: flex; gap: 8px; align-items: center; }
     .nav-btn { padding: 8px 14px; border-radius: 6px; border: none; font-size: 14px; font-weight: bold; cursor: pointer; text-decoration: none; transition: 0.3s; }
     .nav-btn-main { background-color: #3b82f6; color: white; }
     .nav-btn-main.active { background-color: #1d4ed8; border: 2px solid #93c5fd; }
     .nav-btn-sheet { background-color: #f39c12; color: white; }
-    .nav-btn-sheet:hover { background-color: #e67e22; }
+
+    .user-auth-bar { background-color: #0f172a; color: #cbd5e1; padding: 6px 20px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+    .auth-btn-login { background-color: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
     .container { max-width: 900px; margin: 24px auto; padding: 0 15px; }
     .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
@@ -36,7 +40,7 @@
     .btn-delete:hover { background-color: #c0392b; }
     #etcField { display: none; margin-top: 10px; }
     
-    .profile-card { background: #e0f2fe; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-left: 5px solid #0284c7; }
+    .profile-card { background: #e0f2fe; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-left: 5px solid #0284c7; flex-wrap: wrap; gap: 10px; }
     .class-info { font-size: 18px; font-weight: bold; color: #0369a1; }
     
     .tabs-container { margin-bottom: 15px; }
@@ -54,10 +58,18 @@
     .row-highlight { background-color: #fff1f2; }
     
     .loader { text-align: center; margin-top: 10px; color: #0284c7; font-size: 14px; font-weight: bold; display: none; }
+    .notice-box { background-color: #fffbebf8; border: 1px solid #fef3c7; color: #92400e; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; }
   </style>
 </head>
 <body>
 
+  <!-- 상단 로그인 헤더 -->
+  <div class="user-auth-bar">
+    <span>🔒 <strong>구글 계정 인증:</strong> <span id="userEmailDisplay">로그인되지 않음</span></span>
+    <button class="auth-btn-login" onclick="promptEmailLogin()">🔑 담임 이메일 인증하기</button>
+  </div>
+
+  <!-- 메인 헤더 -->
   <div class="header">
     <h1>📝 학생 생활지도 관리 시스템</h1>
     <div class="nav-btn-group">
@@ -69,6 +81,7 @@
 
   <div class="container">
     
+    <!-- VIEW 1: 위반 사항 입력 -->
     <div id="viewInput" class="card">
       <h2 style="margin-top:0; text-align:center;">위반 사항 입력</h2>
       
@@ -123,7 +136,12 @@
       <div id="loader" class="loader">구글 시트로 전송 중입니다... ⏳</div>
     </div>
 
+    <!-- VIEW 2: 담임용 결과 확인 -->
     <div id="viewResult" class="card" style="display:none;">
+      <div class="notice-box">
+        📌 <strong>담임 결과 확인 안내:</strong> "담임계정" 시트 D열에 등록된 본인의 이메일로 로그인해야 해당 학반의 결과를 확인할 수 있습니다.
+      </div>
+
       <div class="profile-card">
         <div>
           <span class="class-info" id="displayClassCode">학반 선택</span>
@@ -151,9 +169,10 @@
   </div>
 
   <script>
-    // ⚠️ 아래 웹 앱 URL을 본인의 Google Apps Script 배포 URL로 바꿔주세요.
+    // ⚠️ 아래 앱스크립트 배포 URL을 입력하세요.
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz9Lbbtqj6a80vusBiQMrmz3jk5qzVTxvNp9ehS-DktAdBlzmg9V_GSGMc6Gu9G2JNG/exec";
 
+    let currentUserEmail = localStorage.getItem("teacher_email") || "";
     let globalData = { students: [], violations: [], teacherInfo: null };
     let currentGrade = 1;
     let currentClassNum = 1;
@@ -162,33 +181,58 @@
     let loadedResultData = null;
 
     document.getElementById('dateInput').valueAsDate = new Date();
+    updateUserEmailUI();
 
-    // ----------------------------------------------------
-    // API 통신 함수 (fetch 기반)
-    // ----------------------------------------------------
+    function updateUserEmailUI() {
+      const display = document.getElementById("userEmailDisplay");
+      if (currentUserEmail) {
+        display.innerHTML = `<strong>${currentUserEmail}</strong>`;
+      } else {
+        display.innerText = "로그인되지 않음 (클릭하여 이메일 입력)";
+      }
+    }
+
+    function promptEmailLogin() {
+      const email = prompt("담임계정 시트 D열에 등록된 이메일 주소를 입력하세요:", currentUserEmail);
+      if (email !== null) {
+        currentUserEmail = email.trim().toLowerCase();
+        localStorage.setItem("teacher_email", currentUserEmail);
+        updateUserEmailUI();
+        // 초기 데이터 재요청 및 화면 갱신
+        initData();
+        if (document.getElementById('viewResult').style.display !== 'none') {
+          loadResultData();
+        }
+      }
+    }
+
     async function callApi(action, payload = {}) {
       if (GAS_WEB_APP_URL.includes("여기에_앱스크립트")) {
-        alert("index.html 파일 상단의 GAS_WEB_APP_URL 변수에 배포된 웹 앱 URL을 입력하세요.");
+        alert("index.html 상단의 GAS_WEB_APP_URL 변수에 앱스크립트 배포 URL을 입력해주세요.");
         return { success: false, message: "URL 미설정" };
       }
       try {
         const response = await fetch(GAS_WEB_APP_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: action, ...payload })
+          body: JSON.stringify({ action: action, userEmail: currentUserEmail, ...payload })
         });
         return await response.json();
       } catch (error) {
         console.error("API Call Error:", error);
-        return { success: false, message: "서버와 통신 중 오류가 발생했습니다." };
+        return { success: false, message: "서버 통신 오류가 발생했습니다." };
       }
     }
 
-    window.onload = async function() {
+    window.onload = function() {
+      initData();
+    };
+
+    async function initData() {
       const data = await callApi("getInitialData");
       if (data && data.students) {
         onInitialDataLoaded(data);
       }
-    };
+    }
 
     function onInitialDataLoaded(data) {
       globalData = data;
@@ -332,30 +376,43 @@
     }
 
     // ----------------------------------------------------
-    // 결과 확인 화면 로직
+    // 결과 확인 화면 및 이메일 매칭 권한 로직
     // ----------------------------------------------------
     function setupTeacherInfo(info) {
       if(!info || !info.classList) return;
 
-      if(info.classList.length > 0) {
-        const select = document.getElementById("classSelect");
-        select.innerHTML = "";
-        info.classList.forEach(c => {
-          const opt = document.createElement("option");
-          opt.value = `${c.grade}-${c.classNum}`;
-          const teacherText = c.teacherName ? ` (${c.teacherName} 선생님)` : "";
-          opt.innerText = `${c.grade}학년 ${c.classNum}반${teacherText}`;
-          opt.setAttribute("data-teacher", c.teacherName || "");
-          select.appendChild(opt);
-        });
+      const select = document.getElementById("classSelect");
+      select.innerHTML = "";
+      let myClassFound = null;
 
-        // 첫번째 반을 기본 선택으로 설정
+      info.classList.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = `${c.grade}-${c.classNum}`;
+        const teacherText = c.teacherName ? ` (${c.teacherName} 선생님)` : "";
+        const lockText = c.isMyClass ? " [내 학반]" : "";
+        
+        opt.innerText = `${c.grade}학년 ${c.classNum}반${teacherText}${lockText}`;
+        opt.setAttribute("data-teacher", c.teacherName || "");
+        
+        if (c.isMyClass) {
+          myClassFound = c;
+        }
+        select.appendChild(opt);
+      });
+
+      // 내 로그인 이메일과 일치하는 학반이 존재할 경우 자동 선택
+      if (myClassFound) {
+        select.value = `${myClassFound.grade}-${myClassFound.classNum}`;
+        currentGrade = myClassFound.grade;
+        currentClassNum = myClassFound.classNum;
+        document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
+        document.getElementById("displayTeacherName").innerText = ` (담임: ${myClassFound.teacherName} 선생님)`;
+      } else if (info.classList.length > 0) {
         const first = info.classList[0];
         currentGrade = first.grade;
         currentClassNum = first.classNum;
-        const teacherText = first.teacherName ? ` (담임: ${first.teacherName} 선생님)` : "";
         document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
-        document.getElementById("displayTeacherName").innerText = teacherText;
+        document.getElementById("displayTeacherName").innerText = first.teacherName ? ` (담임: ${first.teacherName} 선생님)` : "";
       }
     }
 
@@ -371,7 +428,11 @@
         document.getElementById('btnNavInput').classList.remove('active');
         document.getElementById('btnNavResult').classList.add('active');
         
-        loadResultData();
+        if (!currentUserEmail) {
+          promptEmailLogin();
+        } else {
+          loadResultData();
+        }
       }
     }
 
@@ -392,7 +453,7 @@
     }
 
     async function loadResultData(targetMonth) {
-      document.getElementById("tableContent").innerHTML = '<div style="text-align:center; padding:30px;">데이터를 불러오는 중입니다...</div>';
+      document.getElementById("tableContent").innerHTML = '<div style="text-align:center; padding:30px;">데이터 및 접근 권한을 확인하는 중입니다...</div>';
       const data = await callApi("getClassViolationData", {
         grade: currentGrade,
         classNum: currentClassNum,
@@ -403,9 +464,17 @@
 
     function onResultDataLoaded(data) {
       if(!data || data.error) {
-        document.getElementById("tableContent").innerHTML = `<div style="text-align:center; padding:30px; color:red;">${data ? data.error : "오류가 발생했습니다."}</div>`;
+        document.getElementById("monthTabs").innerHTML = "";
+        document.getElementById("dateTabs").innerHTML = "";
+        document.getElementById("tableContent").innerHTML = `
+          <div style="text-align:center; padding:40px; color:#e11d48; font-weight:bold; font-size:15px; background:#fff1f2; border-radius:8px; border:1px solid #fecdd3;">
+            ${data ? data.error : "권한 확인 중 오류가 발생했습니다."}
+            <br><br>
+            <button onclick="promptEmailLogin()" style="padding:8px 16px; background:#0284c7; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">🔑 다른 이메일로 인증하기</button>
+          </div>`;
         return;
       }
+
       loadedResultData = data;
       currentMonth = data.currentSheet;
       document.getElementById("sheetLink").href = data.spreadsheetUrl;
@@ -421,7 +490,7 @@
         monthTabsEl.appendChild(btn);
       });
 
-      // 일자 및 합계 탭 생성
+      // 일자 탭 생성
       const dateTabsEl = document.getElementById("dateTabs");
       dateTabsEl.innerHTML = "";
 
