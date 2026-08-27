@@ -4,644 +4,243 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>학생 생활지도 관리 시스템</title>
-  
-  <!-- 구글 로그인 공식 SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-
   <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
-    
-    .header { background-color: #1e293b; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 10px; }
-    .header h1 { margin: 0; font-size: 18px; font-weight: bold; }
-    .nav-btn-group { display: flex; gap: 8px; align-items: center; }
-    .nav-btn { padding: 8px 14px; border-radius: 6px; border: none; font-size: 14px; font-weight: bold; cursor: pointer; text-decoration: none; transition: 0.3s; }
-    .nav-btn-main { background-color: #3b82f6; color: white; }
-    .nav-btn-main.active { background-color: #1d4ed8; border: 2px solid #93c5fd; }
-    .nav-btn-sheet { background-color: #f39c12; color: white; }
-
-    .user-auth-bar { background-color: #0f172a; color: #cbd5e1; padding: 8px 20px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-    .auth-status-container { display: flex; align-items: center; gap: 10px; }
-    .btn-logout { background-color: #64748b; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-
-    .container { max-width: 900px; margin: 24px auto; padding: 0 15px; }
-    .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f8f9fa; }
+    .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+    .nav-btn { text-decoration: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; font-size: 14px; }
+    .nav-btn-sheet { background-color: #0F9D58; color: white; }
+    .nav-btn-sheet:hover { background-color: #0b8043; }
+    .tab-group { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 12px; border: none; background: #e9ecef; cursor: pointer; border-radius: 6px; font-weight: bold; }
+    .tab-btn.active { background: #0d6efd; color: white; }
     .form-group { margin-bottom: 15px; }
-    label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
-    select, input[type="text"], input[type="date"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; }
-    
-    .checkbox-container { border: 1px solid #ccc; border-radius: 4px; padding: 10px; max-height: 160px; overflow-y: auto; background-color: #fff; }
-    .checkbox-label { display: block; margin-bottom: 8px; font-weight: normal; color: #333; cursor: pointer; font-size: 15px; }
-    .checkbox-label input { margin-right: 10px; transform: scale(1.2); cursor: pointer; }
-    
-    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
-    .btn { flex: 1; padding: 12px; color: white; border: none; border-radius: 4px; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-    .btn-submit { background-color: #4CAF50; }
-    .btn-submit:hover { background-color: #45a049; }
-    .btn-delete { background-color: #e74c3c; }
-    .btn-delete:hover { background-color: #c0392b; }
-    #etcField { display: none; margin-top: 10px; }
-    
-    .profile-card { background: #e0f2fe; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-left: 5px solid #0284c7; flex-wrap: wrap; gap: 10px; }
-    .class-info { font-size: 18px; font-weight: bold; color: #0369a1; }
-    
-    .tabs-container { margin-bottom: 15px; }
-    .tab-group { display: flex; gap: 6px; border-bottom: 2px solid #cbd5e1; padding-bottom: 2px; overflow-x: auto; }
-    .tab-item { padding: 8px 14px; background: #e2e8f0; border: none; border-radius: 6px 6px 0 0; cursor: pointer; font-weight: 600; font-size: 13px; color: #475569; white-space: nowrap; }
-    .tab-item.active { background: #0284c7; color: white; }
-    .summary-tab { background: #f59e0b !important; color: white !important; }
-    .summary-tab.active { background: #d97706 !important; }
-
-    .table-responsive { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-    th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: center; }
-    th { background-color: #f1f5f9; color: #334155; font-weight: 600; }
-    .badge-violation { background-color: #fee2e2; color: #991b1b; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-block; }
-    .row-highlight { background-color: #fff1f2; }
-    
-    .loader { text-align: center; margin-top: 10px; color: #0284c7; font-size: 14px; font-weight: bold; display: none; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    select, input, button { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    button.submit-btn { background: #0d6efd; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+    th { background-color: #f1f3f5; }
+    #dataLoader { text-align: center; font-weight: bold; padding: 20px; }
+    .user-info { font-size: 13px; color: #555; text-align: right; margin-top: 5px; }
   </style>
 </head>
 <body>
 
-  <!-- 상단 로그인 인증 상태 바 -->
-  <div class="user-auth-bar">
-    <div class="auth-status-container">
-      <span>🔒 <strong>구글 담임 인증:</strong> <span id="userEmailDisplay">로그인 안 됨</span></span>
-      <button id="btnLogout" class="btn-logout" onclick="logoutGoogle()" style="display:none;">로그아웃</button>
-    </div>
-    
-    <!-- 구글 원클릭 로그인 버튼 노출 구역 -->
-    <div id="g_id_signin_btn"></div>
-  </div>
-
-  <!-- 메인 헤더 -->
+<div class="container">
   <div class="header">
-    <h1>📝 학생 생활지도 관리 시스템</h1>
-    <div class="nav-btn-group">
-      <button id="btnNavInput" class="nav-btn nav-btn-main active" onclick="switchView('input')">✏️ 위반 사항 입력</button>
-      <button id="btnNavResult" class="nav-btn nav-btn-main" onclick="switchView('result')">📋 담임용 결과 확인</button>
+    <h2>📋 학생 생활지도 관리</h2>
+    <div>
       <a id="sheetLink" href="#" target="_blank" class="nav-btn nav-btn-sheet">⚙️ 관리자</a>
     </div>
   </div>
 
-  <div class="container">
-    
-    <!-- VIEW 1: 위반 사항 입력 -->
-    <div id="viewInput" class="card">
-      <h2 style="margin-top:0; text-align:center;">위반 사항 입력</h2>
-      
-      <div class="form-group">
-        <label>날짜</label>
-        <input type="date" id="dateInput" required>
-      </div>
-
-      <div id="dataLoader" style="text-align:center; color:#0284c7; font-weight:bold; margin-bottom:15px;">⏳ 구글 시트 데이터 연결 중...</div>
-      
-      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-        <div style="flex:1;">
-          <label>학년</label>
-          <select id="grade" onchange="updateClassDropdown()" disabled><option value="">불러오는 중...</option></select>
-        </div>
-        <div style="flex:1;">
-          <label>반</label>
-          <select id="classNum" onchange="updateStudentDropdown()" disabled><option value="">선택</option></select>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>학생 이름 (번호)</label>
-        <select id="student" disabled><option value="">선택</option></select>
-      </div>
-
-      <div class="form-group">
-        <label>교시</label>
-        <select id="period">
-          <option value="조례">조례</option>
-          <option value="1교시" selected>1교시</option>
-          <option value="2교시">2교시</option>
-          <option value="3교시">3교시</option>
-          <option value="4교시">4교시</option>
-          <option value="5교시">5교시</option>
-          <option value="6교시">6교시</option>
-          <option value="7교시">7교시</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>위반 사항 <span style="font-size: 12px; color: #ff3333; font-weight: normal;">(다중 선택 가능)</span></label>
-        <div id="violationContainer" class="checkbox-container">불러오는 중...</div>
-        <input type="text" id="etcField" placeholder="기타 사유를 입력하세요 (예: 떠듦)">
-      </div>
-
-      <div class="btn-group">
-        <button class="btn btn-submit" onclick="submitAction('insert')">✅ 입력하기</button>
-        <button class="btn btn-delete" onclick="submitAction('delete')">🗑️ 입력 취소 (삭제)</button>
-      </div>
-      
-      <div id="loader" class="loader">구글 시트로 전송 중입니다... ⏳</div>
+  <!-- 구글 로그인 영역 -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <div id="g_id_onload"
+      data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+      data-callback="handleCredentialResponse">
     </div>
-
-    <!-- VIEW 2: 담임용 결과 확인 -->
-    <div id="viewResult" class="card" style="display:none;">
-      
-      <div class="profile-card">
-        <div>
-          <span class="class-info" id="displayClassCode">학반 선택</span>
-          <span style="font-size:13px; color:#555;" id="displayTeacherName"></span>
-        </div>
-        <div id="adminClassSelector">
-          <label style="font-size:12px; font-weight:bold;">조회 학반: </label>
-          <select id="classSelect" onchange="changeClass()" style="width:auto; padding:4px;"></select>
-        </div>
-      </div>
-
-      <div class="tabs-container">
-        <div class="tab-group" id="monthTabs"></div>
-      </div>
-
-      <div class="tabs-container">
-        <div class="tab-group" id="dateTabs"></div>
-      </div>
-
-      <div id="tableContent">
-        <div style="text-align:center; padding:30px; color:#666;">데이터를 불러오는 중입니다...</div>
-      </div>
-    </div>
-
+    <div class="g_id_signin" data-type="standard"></div>
+    <div class="user-info" id="userStatus">🔓 로그인 필요</div>
   </div>
 
-  <script>
-    // ⚠️ 1. Google Cloud Console에서 발급받은 OAuth Client ID 입력
-    const GOOGLE_CLIENT_ID = "1079310998076-p4cmjrusteufl8coqtju9vfi2gpi6o4h.apps.googleusercontent.com";
+  <div id="dataLoader">⏳ 데이터를 불러오는 중입니다...</div>
 
-    // ⚠️ 2. 구글 앱스크립트 웹앱 배포 URL 입력
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz9Lbbtqj6a80vusBiQMrmz3jk5qzVTxvNp9ehS-DktAdBlzmg9V_GSGMc6Gu9G2JNG/exec";
+  <div id="mainContent" style="display:none;">
+    <!-- 탭 메뉴 -->
+    <div class="tab-group">
+      <button class="tab-btn active" onclick="switchTab('record')">✏️ 지도 사항 기록</button>
+      <button class="tab-btn" onclick="switchTab('view')">📊 담임용 결과 확인</button>
+    </div>
 
-    let googleIdToken = localStorage.getItem("google_id_token") || "";
-    let userEmail = localStorage.getItem("google_user_email") || "";
-    
-    let globalData = { students: [], violations: [], teacherInfo: null };
-    let currentGrade = 1;
-    let currentClassNum = 1;
-    let currentMonth = "";
-    let currentDate = "";
-    let loadedResultData = null;
+    <!-- 1. 지도 사항 기록 탭 -->
+    <div id="recordTab">
+      <div class="form-group">
+        <label>학년 / 반 / 번호 / 이름</label>
+        <select id="studentSelect">
+          <option value="">-- 학생 선택 --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>지도 항목</label>
+        <select id="violationSelect"></select>
+      </div>
+      <div class="form-group">
+        <label>지도 교사 성명</label>
+        <input type="text" id="teacherName" placeholder="교사 성명 입력">
+      </div>
+      <button class="submit-btn" onclick="submitData()">기록 저장하기</button>
+    </div>
 
-    document.getElementById('dateInput').valueAsDate = new Date();
+    <!-- 2. 담임용 결과 확인 탭 -->
+    <div id="viewTab" style="display:none;">
+      <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <select id="viewGrade">
+          <option value="1">1학년</option>
+          <option value="2">2학년</option>
+          <option value="3">3학년</option>
+        </select>
+        <select id="viewClass">
+          <!-- 1~10반 동적 생성 -->
+        </select>
+        <button onclick="loadClassData()" style="width: auto; background: #198754; color: white;">조회</button>
+      </div>
 
-    // 페이지 로드 시 구글 로그인 SDK 초기화
-    window.onload = function() {
-      initGoogleAuth();
-      updateAuthUI();
-      initData();
-    };
+      <table>
+        <thead>
+          <tr>
+            <th>번호</th>
+            <th>이름</th>
+            <th>일시</th>
+            <th>지도 내용</th>
+            <th>지도 교사</th>
+          </tr>
+        </thead>
+        <tbody id="resultTableBody">
+          <tr><td colspan="5">학반을 선택한 후 조회 버튼을 눌러주세요.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-    function initGoogleAuth() {
-      if (typeof google !== 'undefined' && google.accounts) {
-        google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleCredentialResponse
-        });
+<script>
+  // ⚠️ 본인의 Google Cloud Console에서 발급받은 OAuth Client ID로 변경하세요.
+  const GOOGLE_CLIENT_ID = "1079310998076-p4cmjrusteufl8coqtju9vfi2gpi6o4h.apps.googleusercontent.com";
+  let currentUserToken = "";
 
-        // 상단 구글 로그인 버튼 렌더링
-        google.accounts.id.renderButton(
-          document.getElementById("g_id_signin_btn"),
-          { theme: "outline", size: "medium", text: "signin_with" }
-        );
-      }
-    }
+  window.onload = function () {
+    // 구글 클라이언트 ID 자동 설정
+    const gIdDiv = document.getElementById("g_id_onload");
+    if(gIdDiv) gIdDiv.setAttribute("data-client_id", GOOGLE_CLIENT_ID);
 
-    // 구글 로그인 성공 시 콜백 함수
-    async function handleCredentialResponse(response) {
-      googleIdToken = response.credential;
-      
-      // 토큰 검증 요청
-      const res = await callApi("verifyLogin");
-      if (res && res.success) {
-        userEmail = res.email;
-        localStorage.setItem("google_id_token", googleIdToken);
-        localStorage.setItem("google_user_email", userEmail);
-        
-        updateAuthUI();
-        alert(`Google 계정(${userEmail}) 인증이 완료되었습니다.`);
-        
-        initData();
-        if (document.getElementById('viewResult').style.display !== 'none') {
-          loadResultData();
-        }
-      } else {
-        alert(res ? res.message : "구글 로그인 인증에 실패했습니다.");
-      }
-    }
+    // 초기 데이터 로드 요청
+    fetchAppScript({ action: "getInitialData" }, function(response) {
+      document.getElementById('dataLoader').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
 
-    function logoutGoogle() {
-      googleIdToken = "";
-      userEmail = "";
-      localStorage.removeItem("google_id_token");
-      localStorage.removeItem("google_user_email");
-      updateAuthUI();
-      alert("로그아웃되었습니다.");
-      if (document.getElementById('viewResult').style.display !== 'none') {
-        loadResultData();
-      }
-    }
-
-    function updateAuthUI() {
-      const display = document.getElementById("userEmailDisplay");
-      const logoutBtn = document.getElementById("btnLogout");
-      const signinBtn = document.getElementById("g_id_signin_btn");
-
-      if (userEmail && googleIdToken) {
-        display.innerHTML = `<strong style="color:#38bdf8;">${userEmail}</strong> (인증됨)`;
-        logoutBtn.style.display = "inline-block";
-        signinBtn.style.display = "none";
-      } else {
-        display.innerText = "로그인 안 됨";
-        logoutBtn.style.display = "none";
-        signinBtn.style.display = "block";
-      }
-    }
-
-    async function callApi(action, payload = {}) {
-      if (GAS_WEB_APP_URL.includes("여기에_앱스크립트")) {
-        alert("index.html 상단의 GAS_WEB_APP_URL 변수에 앱스크립트 배포 URL을 입력해주세요.");
-        return { success: false, message: "URL 미설정" };
-      }
-      try {
-        const response = await fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          body: JSON.stringify({ action: action, idToken: googleIdToken, ...payload })
-        });
-        return await response.json();
-      } catch (error) {
-        console.error("API Call Error:", error);
-        return { success: false, message: "서버 통신 오류가 발생했습니다." };
-      }
-    }
-
-    async function initData() {
-      const data = await callApi("getInitialData");
-      if (data && data.students) {
-        onInitialDataLoaded(data);
-      }
-    }
-
-    function onInitialDataLoaded(data) {
-  globalData = data;
-  document.getElementById('dataLoader').style.display = 'none';
-  
-  // 👈 초기 데이터 수신 시 구글 시트 URL을 관리자 버튼에 즉시 연결
-  if (data.spreadsheetUrl) {
-    document.getElementById("sheetLink").href = data.spreadsheetUrl;
-  }
-  
-  populateGrades();
-  populateViolations(data.violations);
-  setupTeacherInfo(data.teacherInfo);
-}
-
-    function populateGrades() {
-      const gradeSelect = document.getElementById('grade');
-      const grades = [...new Set(globalData.students.map(s => s.grade))].sort((a,b) => a - b);
-      gradeSelect.innerHTML = '<option value="">학년 선택</option>';
-      grades.forEach(g => gradeSelect.innerHTML += `<option value="${g}">${g}학년</option>`);
-      gradeSelect.disabled = false;
-    }
-
-    function updateClassDropdown() {
-      const selectedGrade = document.getElementById('grade').value;
-      const classSelect = document.getElementById('classNum');
-      const studentSelect = document.getElementById('student');
-      classSelect.innerHTML = '<option value="">반 선택</option>';
-      studentSelect.innerHTML = '<option value="">학생 선택</option>';
-      studentSelect.disabled = true;
-
-      if (selectedGrade) {
-        const classes = [...new Set(globalData.students.filter(s => s.grade == selectedGrade).map(s => s.classNum))].sort((a,b) => a - b);
-        classes.forEach(c => classSelect.innerHTML += `<option value="${c}">${c}반</option>`);
-        classSelect.disabled = false;
-      } else {
-        classSelect.disabled = true;
-      }
-    }
-
-    function updateStudentDropdown() {
-      const selectedGrade = document.getElementById('grade').value;
-      const selectedClass = document.getElementById('classNum').value;
-      const studentSelect = document.getElementById('student');
-      studentSelect.innerHTML = '<option value="">학생 선택</option>';
-
-      if (selectedGrade && selectedClass) {
-        const students = globalData.students.filter(s => s.grade == selectedGrade && s.classNum == selectedClass).sort((a,b) => a.num - b.num);
-        students.forEach(s => studentSelect.innerHTML += `<option value="${s.num}">${s.num}번 ${s.name}</option>`);
-        studentSelect.disabled = false;
-      } else {
-        studentSelect.disabled = true;
-      }
-    }
-
-    function populateViolations(violations) {
-      const vContainer = document.getElementById('violationContainer');
-      vContainer.innerHTML = '';
-      violations.forEach(v => {
-        vContainer.innerHTML += `
-          <label class="checkbox-label">
-            <input type="checkbox" name="violationCheckbox" value="${v}" onchange="toggleEtcField()"> ${v}
-          </label>`;
-      });
-    }
-
-    function toggleEtcField() {
-      const checkboxes = document.getElementsByName('violationCheckbox');
-      const etcField = document.getElementById('etcField');
-      let isEtcChecked = false;
-      for(let i = 0; i < checkboxes.length; i++) {
-        if (checkboxes[i].checked && checkboxes[i].value.includes("기타")) {
-          isEtcChecked = true; break;
-        }
-      }
-      etcField.style.display = isEtcChecked ? "block" : "none";
-      if (!isEtcChecked) etcField.value = "";
-    }
-
-    async function submitAction(actionType) {
-      const dateRaw = document.getElementById("dateInput").value;
-      const grade = document.getElementById("grade").value;
-      const classNum = document.getElementById("classNum").value;
-      const num = document.getElementById("student").value;
-      const period = document.getElementById("period").value;
-      
-      if (!dateRaw) return alert("날짜를 선택해주세요.");
-      if (!grade || !classNum || !num) return alert("학년, 반, 학생을 정확히 선택해주세요.");
-
-      const payload = {
-        action: actionType,
-        grade: grade,
-        classNum: classNum,
-        num: num,
-        period: period
-      };
-
-      const d = new Date(dateRaw);
-      payload.date = ('0' + (d.getMonth() + 1)).slice(-2) + '. ' + ('0' + d.getDate()).slice(-2) + '.'; 
-
-      if (actionType === 'insert') {
-        const checkboxes = document.getElementsByName('violationCheckbox');
-        let selectedViolations = [];
-        let hasEtc = false;
-        
-        for(let i = 0; i < checkboxes.length; i++) {
-          if(checkboxes[i].checked) {
-            let val = checkboxes[i].value;
-            if(val.includes("기타")) hasEtc = true;
-            selectedViolations.push(val);
-          }
-        }
-        const etcDetail = document.getElementById("etcField").value;
-
-        if (selectedViolations.length === 0) return alert("위반 사항을 1개 이상 선택해주세요.");
-        if (hasEtc && !etcDetail.trim()) return alert("기타 상세 사유를 입력해주세요.");
-
-        if(hasEtc) {
-          for(let i = 0; i < selectedViolations.length; i++) {
-            if(selectedViolations[i].includes("기타")) selectedViolations[i] = `기타(${etcDetail.trim()})`;
-          }
-        }
-        payload.violation = selectedViolations.join(", ");
-      } 
-      else if (actionType === 'delete') {
-        if (!confirm(`해당 학생의 [${period}] 기록을 완전히 삭제하시겠습니까?`)) return;
+      // 접속 즉시 관리자 시트 URL 연결
+      if (response.spreadsheetUrl) {
+        document.getElementById("sheetLink").href = response.spreadsheetUrl;
       }
 
-      document.getElementById("loader").style.display = "block";
+      initStudentSelect(response.students);
+      initViolationSelect(response.violations);
+      initClassOptions();
+    });
+  };
 
-      const res = await callApi("submitViolation", { payload: payload });
-      document.getElementById("loader").style.display = "none";
-
+  // 구글 로그인 콜백
+  function handleCredentialResponse(response) {
+    currentUserToken = response.credential;
+    fetchAppScript({ action: "verifyLogin", idToken: currentUserToken }, function(res) {
       if(res.success) {
-        alert(res.message || "성공적으로 처리되었습니다.");
-        const checkboxes = document.getElementsByName('violationCheckbox');
-        for(let i = 0; i < checkboxes.length; i++) checkboxes[i].checked = false;
-        toggleEtcField();
-        document.getElementById("student").value = "";
+        document.getElementById("userStatus").innerText = "🔒 로그인됨: " + res.email;
+        alert("구글 인증 성공!");
       } else {
-        alert("처리 실패: " + res.message);
+        alert(res.message);
       }
+    });
+  }
+
+  // 탭 전환
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    if (tab === 'record') {
+      document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      document.getElementById('recordTab').style.display = 'block';
+      document.getElementById('viewTab').style.display = 'none';
+    } else {
+      document.querySelectorAll('.tab-btn')[1].classList.add('active');
+      document.getElementById('recordTab').style.display = 'none';
+      document.getElementById('viewTab').style.display = 'block';
+    }
+  }
+
+  // 담임용 학반 데이터 조회
+  function loadClassData() {
+    if (!currentUserToken) {
+      alert("구글 로그인이 필요합니다. 상단 구글 버튼으로 로그인해 주세요.");
+      return;
     }
 
-    function setupTeacherInfo(info) {
-      if(!info || !info.classList) return;
+    const grade = document.getElementById("viewGrade").value;
+    const classNum = document.getElementById("viewClass").value;
 
-      const select = document.getElementById("classSelect");
-      select.innerHTML = "";
-      let myClassFound = null;
-
-      info.classList.forEach(c => {
-        const opt = document.createElement("option");
-        opt.value = `${c.grade}-${c.classNum}`;
-        const teacherText = c.teacherName ? ` (${c.teacherName} 선생님)` : "";
-        const lockText = c.isMyClass ? " [내 학반]" : "";
-        
-        opt.innerText = `${c.grade}학년 ${c.classNum}반${teacherText}${lockText}`;
-        opt.setAttribute("data-teacher", c.teacherName || "");
-        
-        if (c.isMyClass) {
-          myClassFound = c;
-        }
-        select.appendChild(opt);
-      });
-
-      if (myClassFound) {
-        select.value = `${myClassFound.grade}-${myClassFound.classNum}`;
-        currentGrade = myClassFound.grade;
-        currentClassNum = myClassFound.classNum;
-        document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
-        document.getElementById("displayTeacherName").innerText = ` (담임: ${myClassFound.teacherName} 선생님)`;
-      } else if (info.classList.length > 0) {
-        const first = info.classList[0];
-        currentGrade = first.grade;
-        currentClassNum = first.classNum;
-        document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
-        document.getElementById("displayTeacherName").innerText = first.teacherName ? ` (담임: ${first.teacherName} 선생님)` : "";
-      }
-    }
-
-    function switchView(viewName) {
-      if(viewName === 'input') {
-        document.getElementById('viewInput').style.display = 'block';
-        document.getElementById('viewResult').style.display = 'none';
-        document.getElementById('btnNavInput').classList.add('active');
-        document.getElementById('btnNavResult').classList.remove('active');
+    fetchAppScript({
+      action: "getClassViolationData",
+      grade: grade,
+      classNum: classNum,
+      idToken: currentUserToken
+    }, function(res) {
+      if (res.success) {
+        renderTable(res.list);
       } else {
-        document.getElementById('viewInput').style.display = 'none';
-        document.getElementById('viewResult').style.display = 'block';
-        document.getElementById('btnNavInput').classList.remove('active');
-        document.getElementById('btnNavResult').classList.add('active');
-        
-        loadResultData();
+        alert(res.message);
       }
+    });
+  }
+
+  function renderTable(list) {
+    const tbody = document.getElementById("resultTableBody");
+    tbody.innerHTML = "";
+    if (!list || list.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='5'>기록된 지도 사항이 없습니다.</td></tr>";
+      return;
     }
+    list.forEach(item => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${item.num}</td><td>${item.name}</td><td>${item.date}</td><td>${item.violation}</td><td>${item.teacher}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
 
-    function changeClass() {
-      const select = document.getElementById("classSelect");
-      const val = select.value;
-      const selectedOpt = select.options[select.selectedIndex];
-      const teacherName = selectedOpt.getAttribute("data-teacher");
-      
-      const parts = val.split("-");
-      currentGrade = parseInt(parts[0], 10);
-      currentClassNum = parseInt(parts[1], 10);
-      
-      document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
-      document.getElementById("displayTeacherName").innerText = teacherName ? ` (담임: ${teacherName} 선생님)` : "";
-      
-      loadResultData(currentMonth);
+  // 백엔드 통신 공통 함수
+  function fetchAppScript(data, callback) {
+    // 앱스크립트 웹앱 URL 입력 (exec 주소)
+    const googleAppScriptUrl = "https://script.google.com/macros/s/AKfycbz9Lbbtqj6a80vusBiQMrmz3jk5qzVTxvNp9ehS-DktAdBlzmg9V_GSGMc6Gu9G2JNG/exec"; 
+    
+    fetch(googleAppScriptUrl, {
+      method: "POST",
+      body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(response => callback(response))
+    .catch(err => console.error("Error:", err));
+  }
+
+  function initStudentSelect(students) {
+    const select = document.getElementById("studentSelect");
+    students.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = JSON.stringify(s);
+      opt.innerText = `${s.grade}학년 ${s.classNum}반 ${s.num}번 ${s.name}`;
+      select.appendChild(opt);
+    });
+  }
+
+  function initViolationSelect(violations) {
+    const select = document.getElementById("violationSelect");
+    violations.forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.innerText = v;
+      select.appendChild(opt);
+    });
+  }
+
+  function initClassOptions() {
+    const select = document.getElementById("viewClass");
+    for (let i = 1; i <= 10; i++) {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.innerText = i + "반";
+      select.appendChild(opt);
     }
+  }
+</script>
 
-    async function loadResultData(targetMonth) {
-      document.getElementById("tableContent").innerHTML = '<div style="text-align:center; padding:30px;">구글 인증 상태 및 담임 권한을 확인하는 중입니다...</div>';
-      const data = await callApi("getClassViolationData", {
-        grade: currentGrade,
-        classNum: currentClassNum,
-        targetMonthSheet: targetMonth
-      });
-      onResultDataLoaded(data);
-    }
-
-    function onResultDataLoaded(data) {
-      if(!data || data.error) {
-        document.getElementById("monthTabs").innerHTML = "";
-        document.getElementById("dateTabs").innerHTML = "";
-        document.getElementById("tableContent").innerHTML = `
-          <div style="text-align:center; padding:40px; color:#e11d48; font-weight:bold; font-size:15px; background:#fff1f2; border-radius:8px; border:1px solid #fecdd3;">
-            ${data ? data.error : "권한 확인 중 오류가 발생했습니다."}
-          </div>`;
-        return;
-      }
-
-      loadedResultData = data;
-      currentMonth = data.currentSheet;
-      document.getElementById("sheetLink").href = data.spreadsheetUrl;
-
-      const monthTabsEl = document.getElementById("monthTabs");
-      monthTabsEl.innerHTML = "";
-      data.monthSheets.forEach(m => {
-        const btn = document.createElement("button");
-        btn.className = `tab-item ${m === currentMonth ? 'active' : ''}`;
-        btn.innerText = m;
-        btn.onclick = () => loadResultData(m);
-        monthTabsEl.appendChild(btn);
-      });
-
-      const dateTabsEl = document.getElementById("dateTabs");
-      dateTabsEl.innerHTML = "";
-
-      const summaryBtn = document.createElement("button");
-      summaryBtn.className = `tab-item summary-tab ${currentDate === 'SUMMARY' ? 'active' : ''}`;
-      summaryBtn.innerText = "📊 월별 위반 사례별 합계";
-      summaryBtn.onclick = () => selectDateTab('SUMMARY');
-      dateTabsEl.appendChild(summaryBtn);
-
-      if (data.dates && data.dates.length > 0) {
-        if(!currentDate || currentDate === 'SUMMARY' || !data.dates.includes(currentDate)) {
-          currentDate = data.dates[0];
-        }
-        data.dates.forEach(d => {
-          const btn = document.createElement("button");
-          btn.className = `tab-item ${d === currentDate ? 'active' : ''}`;
-          btn.innerText = d;
-          btn.onclick = () => selectDateTab(d);
-          dateTabsEl.appendChild(btn);
-        });
-      }
-
-      renderResultTable();
-    }
-
-    function selectDateTab(dateKey) {
-      currentDate = dateKey;
-      const btns = document.querySelectorAll("#dateTabs .tab-item");
-      btns.forEach(b => {
-        if((dateKey === 'SUMMARY' && b.innerText.includes("합계")) || b.innerText === dateKey) {
-          b.classList.add("active");
-        } else {
-          b.classList.remove("active");
-        }
-      });
-      renderResultTable();
-    }
-
-    function renderResultTable() {
-      const container = document.getElementById("tableContent");
-
-      if (currentDate === 'SUMMARY') {
-        const summary = loadedResultData.monthlySummary;
-        const keys = Object.keys(summary);
-
-        if(keys.length === 0) {
-          container.innerHTML = "<p style='text-align:center; padding: 20px;'>🎉 해당 월에는 위반 사례가 없습니다.</p>";
-          return;
-        }
-
-        let html = `<h3 style="margin-top:5px;">📌 ${currentMonth} 위반 사례별 총 집계</h3>`;
-        html += `<div class="table-responsive"><table><thead><tr>
-                  <th>위반 항목</th>
-                  <th>총 발생 건수</th>
-                  <th>대상 학생 및 횟수</th>
-                 </tr></thead><tbody>`;
-
-        keys.forEach(k => {
-          const item = summary[k];
-          const studentListStr = Object.keys(item.students)
-            .map(sName => `${sName}(${item.students[sName]}회)`)
-            .join(", ");
-
-          html += `<tr>
-                    <td><strong>${k}</strong></td>
-                    <td><span class="badge-violation">${item.total}건</span></td>
-                    <td style="text-align:left;">${studentListStr}</td>
-                   </tr>`;
-        });
-        html += "</tbody></table></div>";
-        container.innerHTML = html;
-
-      } else {
-        const list = loadedResultData.dailyData[currentDate] || [];
-        if(list.length === 0) {
-          container.innerHTML = "<p style='text-align:center; padding: 20px;'>해당 일자에 등록된 학생 데이터가 없습니다.</p>";
-          return;
-        }
-
-        let html = `<div class="table-responsive"><table><thead><tr>
-                  <th style="width:40px;">번호</th>
-                  <th style="width:80px;">이름</th>
-                  <th>조례</th><th>1교시</th><th>2교시</th><th>3교시</th>
-                  <th>4교시</th><th>5교시</th><th>6교시</th><th>7교시</th>
-                 </tr></thead><tbody>`;
-
-        list.forEach(s => {
-          const trClass = s.hasViolation ? "row-highlight" : "";
-          html += `<tr class="${trClass}">
-                    <td>${s.num}</td>
-                    <td><strong>${s.name}</strong></td>`;
-          
-          ["조례","1교시","2교시","3교시","4교시","5교시","6교시","7교시"].forEach(p => {
-            const v = s.periods[p];
-            if(v) {
-              html += `<td><span class="badge-violation">${v}</span></td>`;
-            } else {
-              html += `<td style="color:#d1d5db;">-</td>`;
-            }
-          });
-          html += `</tr>`;
-        });
-
-        html += "</tbody></table></div>";
-        container.innerHTML = html;
-      }
-    }
-  </script>
 </body>
 </html>
