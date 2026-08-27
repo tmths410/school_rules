@@ -82,7 +82,7 @@
     <div class="nav-btn-group">
       <button id="btnNavInput" class="nav-btn nav-btn-main active" onclick="switchView('input')">✏️ 위반 사항 입력</button>
       <button id="btnNavResult" class="nav-btn nav-btn-main" onclick="switchView('result')">📋 담임용 결과 확인</button>
-      <a id="sheetLink" href="#" target="_blank" class="nav-btn nav-btn-sheet">⚙️ 관리자 시트 접속</a>
+      <a id="sheetLink" href="#" target="_blank" class="nav-btn nav-btn-sheet">⚙️ 관리자</a>
     </div>
   </div>
 
@@ -289,13 +289,18 @@
     }
 
     function onInitialDataLoaded(data) {
-      globalData = data;
-      document.getElementById('dataLoader').style.display = 'none';
-      
-      populateGrades();
-      populateViolations(data.violations);
-      setupTeacherInfo(data.teacherInfo);
-    }
+  globalData = data;
+  document.getElementById('dataLoader').style.display = 'none';
+  
+  // 👈 초기 데이터 수신 시 구글 시트 URL을 관리자 버튼에 즉시 연결
+  if (data.spreadsheetUrl) {
+    document.getElementById("sheetLink").href = data.spreadsheetUrl;
+  }
+  
+  populateGrades();
+  populateViolations(data.violations);
+  setupTeacherInfo(data.teacherInfo);
+}
 
     function populateGrades() {
       const gradeSelect = document.getElementById('grade');
