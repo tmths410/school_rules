@@ -58,7 +58,6 @@
 </head>
 <body>
 
-  <!-- 상단 헤더 -->
   <div class="header">
     <h1>📝 학생 생활지도 관리 시스템</h1>
     <div class="nav-btn-group">
@@ -70,7 +69,6 @@
 
   <div class="container">
     
-    <!-- VIEW 1: 위반 사항 입력 -->
     <div id="viewInput" class="card">
       <h2 style="margin-top:0; text-align:center;">위반 사항 입력</h2>
       
@@ -125,7 +123,6 @@
       <div id="loader" class="loader">구글 시트로 전송 중입니다... ⏳</div>
     </div>
 
-    <!-- VIEW 2: 담임용 결과 확인 -->
     <div id="viewResult" class="card" style="display:none;">
       <div class="profile-card">
         <div>
@@ -154,7 +151,7 @@
   </div>
 
   <script>
-    // ⚠️ 아래 큰따옴표 안에 본인의 Apps Script 웹앱 URL을 입력하세요.
+    // ⚠️ 아래 웹 앱 URL을 본인의 Google Apps Script 배포 URL로 바꿔주세요.
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz9Lbbtqj6a80vusBiQMrmz3jk5qzVTxvNp9ehS-DktAdBlzmg9V_GSGMc6Gu9G2JNG/exec";
 
     let globalData = { students: [], violations: [], teacherInfo: null };
@@ -171,7 +168,7 @@
     // ----------------------------------------------------
     async function callApi(action, payload = {}) {
       if (GAS_WEB_APP_URL.includes("여기에_앱스크립트")) {
-        alert("index.html 파일 상단의 GAS_WEB_APP_URL 변수에 배포된 웹 앱 URL을 지정해 주세요.");
+        alert("index.html 파일 상단의 GAS_WEB_APP_URL 변수에 배포된 웹 앱 URL을 입력하세요.");
         return { success: false, message: "URL 미설정" };
       }
       try {
@@ -338,24 +335,27 @@
     // 결과 확인 화면 로직
     // ----------------------------------------------------
     function setupTeacherInfo(info) {
-      if(!info) return;
+      if(!info || !info.classList) return;
 
-      if(info.classList && info.classList.length > 0) {
+      if(info.classList.length > 0) {
         const select = document.getElementById("classSelect");
         select.innerHTML = "";
         info.classList.forEach(c => {
           const opt = document.createElement("option");
-          opt.value = c.classCode;
-          opt.innerText = `${c.classCode}반 (${c.teacherName})`;
+          opt.value = `${c.grade}-${c.classNum}`;
+          const teacherText = c.teacherName ? ` (${c.teacherName} 선생님)` : "";
+          opt.innerText = `${c.grade}학년 ${c.classNum}반${teacherText}`;
+          opt.setAttribute("data-teacher", c.teacherName || "");
           select.appendChild(opt);
         });
 
-        // 첫번째 반을 기본값으로 설정
-        const firstParts = info.classList[0].classCode.split("-");
-        currentGrade = parseInt(firstParts[0]);
-        currentClassNum = parseInt(firstParts[1]);
+        // 첫번째 반을 기본 선택으로 설정
+        const first = info.classList[0];
+        currentGrade = first.grade;
+        currentClassNum = first.classNum;
+        const teacherText = first.teacherName ? ` (담임: ${first.teacherName} 선생님)` : "";
         document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
-        document.getElementById("displayTeacherName").innerText = ` (담임: ${info.classList[0].teacherName} 선생님)`;
+        document.getElementById("displayTeacherName").innerText = teacherText;
       }
     }
 
@@ -378,13 +378,16 @@
     function changeClass() {
       const select = document.getElementById("classSelect");
       const val = select.value;
-      const text = select.options[select.selectedIndex].text;
+      const selectedOpt = select.options[select.selectedIndex];
+      const teacherName = selectedOpt.getAttribute("data-teacher");
+      
       const parts = val.split("-");
-      currentGrade = parseInt(parts[0]);
-      currentClassNum = parseInt(parts[1]);
+      currentGrade = parseInt(parts[0], 10);
+      currentClassNum = parseInt(parts[1], 10);
       
       document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
-      document.getElementById("displayTeacherName").innerText = ` (${text.split(" ")[1]} 선생님)`;
+      document.getElementById("displayTeacherName").innerText = teacherName ? ` (담임: ${teacherName} 선생님)` : "";
+      
       loadResultData(currentMonth);
     }
 
@@ -494,7 +497,7 @@
       } else {
         const list = loadedResultData.dailyData[currentDate] || [];
         if(list.length === 0) {
-          container.innerHTML = "<p style='text-align:center; padding: 20px;'>해당 일자의 학생 데이터가 없습니다.</p>";
+          container.innerHTML = "<p style='text-align:center; padding: 20px;'>해당 일자에 등록된 학생 데이터가 없습니다.</p>";
           return;
         }
 
