@@ -510,13 +510,14 @@
       onResultDataLoaded(data);
     }
 
-    function onResultDataLoaded(data) {
-      if(!data || data.error) {
+     function onResultDataLoaded(data) {
+      // 수정된 부분: data.error가 아니라 !data.success 를 체크하고, data.message를 출력합니다.
+      if(!data || !data.success) {
         document.getElementById("monthTabs").innerHTML = "";
         document.getElementById("dateTabs").innerHTML = "";
         document.getElementById("tableContent").innerHTML = `
           <div style="text-align:center; padding:40px; color:#e11d48; font-weight:bold; font-size:15px; background:#fff1f2; border-radius:8px; border:1px solid #fecdd3;">
-            ${data ? data.error : "권한 확인 중 오류가 발생했습니다."}
+            ${data ? data.message : "데이터를 불러오는 중 오류가 발생했습니다."}
           </div>`;
         return;
       }
