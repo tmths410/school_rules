@@ -376,16 +376,17 @@
       if (!dateRaw) return alert("날짜를 선택해주세요.");
       if (!grade || !classNum || !num) return alert("학년, 반, 학생을 정확히 선택해주세요.");
 
+      const d = new Date(dateRaw);
       const payload = {
         action: actionType,
         grade: grade,
         classNum: classNum,
         num: num,
-        period: period
-      };
-
-      const d = new Date(dateRaw);
-      payload.date = ('0' + (d.getMonth() + 1)).slice(-2) + '. ' + ('0' + d.getDate()).slice(-2) + '.'; 
+        period: period,
+        date: ('0' + (d.getMonth() + 1)).slice(-2) + '. ' + ('0' + d.getDate()).slice(-2) + '.',
+        // 구글 시트 이름 형식에 맞게 연도와 월을 함께 전달 (예: "2026. 08.")
+        targetSheet: d.getFullYear() + '. ' + ('0' + (d.getMonth() + 1)).slice(-2) + '.'
+      }; 
 
       if (actionType === 'insert') {
         const checkboxes = document.getElementsByName('violationCheckbox');
