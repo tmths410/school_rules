@@ -8,6 +8,14 @@
   <!-- 구글 로그인 공식 SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
+  <!-- Vercel Web Analytics -->
+  <script>
+    window.va = window.va || function () { 
+      (window.vaq = window.vaq || []).push(arguments); 
+    };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
