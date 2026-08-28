@@ -423,6 +423,10 @@
 
       if(res.success) {
         alert(res.message || "성공적으로 처리되었습니다.");
+        
+        // 💡 수정된 부분: 새로운 위반 내역이 추가되었으므로, 결과 확인 탭으로 갈 때 새로고침 되도록 캐시를 비움
+        loadedResultData = null; 
+        
         const checkboxes = document.getElementsByName('violationCheckbox');
         for(let i = 0; i < checkboxes.length; i++) checkboxes[i].checked = false;
         toggleEtcField();
@@ -481,7 +485,10 @@
         document.getElementById('btnNavInput').classList.remove('active');
         document.getElementById('btnNavResult').classList.add('active');
         
-        loadResultData();
+        // 💡 수정된 부분: 이미 데이터를 불러온 상태라면 굳이 또 로딩하지 않음
+        if (!loadedResultData) {
+          loadResultData(currentMonth);
+        }
       }
     }
 
@@ -502,7 +509,9 @@
     }
 
     async function loadResultData(targetMonth) {
-      document.getElementById("tableContent").innerHTML = '<div style="text-align:center; padding:30px;">구글 인증 상태 및 담임 권한을 확인하는 중입니다...</div>';
+      // 💡 수정된 부분: 사용자에게 불필요한 '인증 확인' 문구를 없애서 체감 속도 및 오해 완화
+      document.getElementById("tableContent").innerHTML = '<div style="text-align:center; padding:30px; color:#0284c7; font-weight:bold;">데이터를 불러오는 중입니다... ⏳</div>';
+      
       const data = await callApi("getClassViolationData", {
         grade: currentGrade,
         classNum: currentClassNum,
