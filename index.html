@@ -560,8 +560,9 @@
       dateTabsEl.appendChild(summaryBtn);
 
       if (data.dates && data.dates.length > 0) {
-        if(!currentDate || currentDate === 'SUMMARY' || !data.dates.includes(currentDate)) {
-          currentDate = data.dates[0];
+        // 첫 화면이거나 기존 선택 날짜가 없으면 무조건 'SUMMARY(합계)'를 기본으로 띄우도록 수정
+        if(!currentDate || !data.dates.includes(currentDate)) {
+          currentDate = 'SUMMARY';
         }
         data.dates.forEach(d => {
           const btn = document.createElement("button");
@@ -609,9 +610,16 @@
 
         keys.forEach(k => {
           const item = summary[k];
+          // 대상 학생의 횟수 및 위반 일자를 가독성 좋게 태그 형태로 출력하도록 수정
           const studentListStr = Object.keys(item.students)
-            .map(sName => `${sName}(${item.students[sName]}회)`)
-            .join(", ");
+            .map(sName => {
+              const info = item.students[sName];
+              const dateStr = info.dates.join(", "); // 예: 08. 01., 08. 05.
+              return `<span style="display:inline-block; margin:2px 4px 2px 0; background:#f1f5f9; padding:4px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">
+                        <strong>${sName}</strong> (${info.count}회 / 📅 ${dateStr})
+                      </span>`;
+            })
+            .join(" ");
 
           html += `<tr>
                     <td><strong>${k}</strong></td>
