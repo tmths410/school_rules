@@ -16,8 +16,8 @@
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
     
-    .header { background-color: #1e293b; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 10px; }
-    .header h1 { margin: 0; font-size: 18px; font-weight: bold; }
+    .header { background-color: #1e293b; color: white; padding: 18px 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); gap: 15px; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: bold; text-align: center; }
     .nav-btn-group { display: flex; gap: 8px; align-items: center; }
     .nav-btn { padding: 8px 14px; border-radius: 6px; border: none; font-size: 14px; font-weight: bold; cursor: pointer; text-decoration: none; transition: 0.3s; }
     .nav-btn-main { background-color: #3b82f6; color: white; }
@@ -94,8 +94,7 @@
     
     <!-- VIEW 1: 위반 사항 입력 -->
     <div id="viewInput" class="card">
-      <h2 style="margin-top:0; text-align:center;">위반 사항 입력</h2>
-      
+            
       <div class="form-group">
         <label>날짜</label>
         <input type="date" id="dateInput" required>
