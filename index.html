@@ -18,7 +18,7 @@
     
     .header { background-color: #1e293b; color: white; padding: 18px 20px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); gap: 15px; }
     .header h1 { margin: 0; font-size: 24px; font-weight: bold; text-align: center; }
-    .nav-btn-group { display: flex; gap: 6px; align-items: center; width: 100%; justify-content: flex-end; }
+    .nav-btn-group { display: flex; gap: 6px; align-items: center; width: 100%; justify-content: flex-end; flex-wrap: wrap; }
     .nav-btn { padding: 6px 10px; border-radius: 4px; border: none; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; transition: 0.3s; }
     .nav-btn-main { background-color: #3b82f6; color: white; }
     .nav-btn-main.active { background-color: #1d4ed8; border: 2px solid #93c5fd; }
@@ -80,12 +80,13 @@
     <div id="g_id_signin_btn"></div>
   </div>
 
-  <!-- 메인 헤더 -->
+  <!-- 메인 헤더 (요구사항 1: 학년별 결과 확인 탭 추가) -->
   <div class="header">
     <h1>학생 생활지도 관리 시스템</h1>
     <div class="nav-btn-group">
       <button id="btnNavInput" class="nav-btn nav-btn-main active" onclick="switchView('input')">✏️ 생활지도 사항 입력</button>
       <button id="btnNavResult" class="nav-btn nav-btn-main" onclick="switchView('result')">📋 담임용 결과 확인</button>
+      <button id="btnNavGradeResult" class="nav-btn nav-btn-main" onclick="switchView('gradeResult')">📊 학년별 결과 확인</button>
       <a id="sheetLink" href="#" target="_blank" class="nav-btn nav-btn-sheet">⚙️ 관리자</a>
     </div>
   </div>
@@ -173,13 +174,33 @@
       </div>
     </div>
 
+    <!-- VIEW 3: 학년별 결과 확인 (요구사항 1 신규 화면) -->
+    <div id="viewGradeResult" class="card" style="display:none;">
+      
+      <div class="profile-card">
+        <div>
+          <span class="class-info" id="displayGradeCode">학년 선택</span>
+          <span style="font-size:13px; color:#555;"> (학년 전체 월별 위반 사례별 합계)</span>
+        </div>
+        <div id="gradeSelectorContainer">
+          <label style="font-size:12px; font-weight:bold;">조회 학년: </label>
+          <select id="gradeSelect" onchange="changeGradeResult()" style="width:auto; padding:4px;"></select>
+        </div>
+      </div>
+
+      <div class="tabs-container">
+        <div class="tab-group" id="gradeMonthTabs"></div>
+      </div>
+
+      <div id="gradeTableContent">
+        <div style="text-align:center; padding:30px; color:#666;">데이터를 불러오는 중입니다...</div>
+      </div>
+    </div>
+
   </div>
 
   <script>
-    // ⚠️ 1. Google Cloud Console에서 발급받은 OAuth Client ID 입력
     const GOOGLE_CLIENT_ID = "1079310998076-p4cmjrusteufl8coqtju9vfi2gpi6o4h.apps.googleusercontent.com";
-
-    // ⚠️ 2. 구글 앱스크립트 웹앱 배포 URL 입력
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz9Lbbtqj6a80vusBiQMrmz3jk5qzVTxvNp9ehS-DktAdBlzmg9V_GSGMc6Gu9G2JNG/exec";
 
     let googleIdToken = localStorage.getItem("google_id_token") || "";
@@ -192,9 +213,13 @@
     let currentDate = "";
     let loadedResultData = null;
 
+    // 학년별 결과 확인용 상태 변수
+    let currentGradeResult = 1;
+    let currentGradeMonth = "";
+    let loadedGradeResultData = null;
+
     document.getElementById('dateInput').valueAsDate = new Date();
 
-    // 페이지 로드 시 구글 로그인 SDK 초기화
     window.onload = function() {
       initGoogleAuth();
       updateAuthUI();
@@ -208,7 +233,6 @@
           callback: handleCredentialResponse
         });
 
-        // 상단 구글 로그인 버튼 렌더링
         google.accounts.id.renderButton(
           document.getElementById("g_id_signin_btn"),
           { theme: "outline", size: "medium", text: "signin_with" }
@@ -216,11 +240,9 @@
       }
     }
 
-    // 구글 로그인 성공 시 콜백 함수
     async function handleCredentialResponse(response) {
       googleIdToken = response.credential;
       
-      // 토큰 검증 요청
       const res = await callApi("verifyLogin");
       if (res && res.success) {
         userEmail = res.email;
@@ -233,6 +255,8 @@
         initData();
         if (document.getElementById('viewResult').style.display !== 'none') {
           loadResultData();
+        } else if (document.getElementById('viewGradeResult').style.display !== 'none') {
+          loadGradeResultData();
         }
       } else {
         alert(res ? res.message : "구글 로그인 인증에 실패했습니다.");
@@ -248,6 +272,8 @@
       alert("로그아웃되었습니다.");
       if (document.getElementById('viewResult').style.display !== 'none') {
         loadResultData();
+      } else if (document.getElementById('viewGradeResult').style.display !== 'none') {
+        loadGradeResultData();
       }
     }
 
@@ -292,18 +318,17 @@
     }
 
     function onInitialDataLoaded(data) {
-  globalData = data;
-  document.getElementById('dataLoader').style.display = 'none';
-  
-  // 👈 초기 데이터 수신 시 구글 시트 URL을 관리자 버튼에 즉시 연결
-  if (data.spreadsheetUrl) {
-    document.getElementById("sheetLink").href = data.spreadsheetUrl;
-  }
-  
-  populateGrades();
-  populateViolations(data.violations);
-  setupTeacherInfo(data.teacherInfo);
-}
+      globalData = data;
+      document.getElementById('dataLoader').style.display = 'none';
+      
+      if (data.spreadsheetUrl) {
+        document.getElementById("sheetLink").href = data.spreadsheetUrl;
+      }
+      
+      populateGrades();
+      populateViolations(data.violations);
+      setupTeacherInfo(data.teacherInfo);
+    }
 
     function populateGrades() {
       const gradeSelect = document.getElementById('grade');
@@ -387,7 +412,6 @@
         num: num,
         period: period,
         date: ('0' + (d.getMonth() + 1)).slice(-2) + '. ' + ('0' + d.getDate()).slice(-2) + '.',
-        // 구글 시트 이름 형식에 맞게 연도와 월을 함께 전달 (예: "2026. 08.")
         targetSheet: d.getFullYear() + '. ' + ('0' + (d.getMonth() + 1)).slice(-2) + '.'
       }; 
 
@@ -427,8 +451,9 @@
       if(res.success) {
         alert(res.message || "성공적으로 처리되었습니다.");
         
-        // 💡 수정된 부분: 새로운 위반 내역이 추가되었으므로, 결과 확인 탭으로 갈 때 새로고침 되도록 캐시를 비움
+        // 새로고침을 위해 캐시 초기화
         loadedResultData = null; 
+        loadedGradeResultData = null;
         
         const checkboxes = document.getElementsByName('violationCheckbox');
         for(let i = 0; i < checkboxes.length; i++) checkboxes[i].checked = false;
@@ -445,6 +470,20 @@
       const select = document.getElementById("classSelect");
       select.innerHTML = "";
       let myClassFound = null;
+
+      // 학년별 선택 드롭다운 설정
+      const gradeSelect = document.getElementById("gradeSelect");
+      if (gradeSelect) gradeSelect.innerHTML = "";
+      const availableGrades = [...new Set(info.classList.map(c => c.grade))].sort((a,b) => a - b);
+
+      availableGrades.forEach(g => {
+        if (gradeSelect) {
+          const gOpt = document.createElement("option");
+          gOpt.value = g;
+          gOpt.innerText = `${g}학년`;
+          gradeSelect.appendChild(gOpt);
+        }
+      });
 
       info.classList.forEach(c => {
         const opt = document.createElement("option");
@@ -465,32 +504,55 @@
         select.value = `${myClassFound.grade}-${myClassFound.classNum}`;
         currentGrade = myClassFound.grade;
         currentClassNum = myClassFound.classNum;
+        currentGradeResult = myClassFound.grade;
+        if (gradeSelect) gradeSelect.value = myClassFound.grade;
+
         document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
         document.getElementById("displayTeacherName").innerText = ` (담임: ${myClassFound.teacherName} 선생님)`;
+        document.getElementById("displayGradeCode").innerText = `${currentGradeResult}학년 학년별 집계`;
       } else if (info.classList.length > 0) {
         const first = info.classList[0];
         currentGrade = first.grade;
         currentClassNum = first.classNum;
+        currentGradeResult = first.grade;
+        if (gradeSelect) gradeSelect.value = first.grade;
+
         document.getElementById("displayClassCode").innerText = `${currentGrade}학년 ${currentClassNum}반 결과`;
         document.getElementById("displayTeacherName").innerText = first.teacherName ? ` (담임: ${first.teacherName} 선생님)` : "";
+        document.getElementById("displayGradeCode").innerText = `${currentGradeResult}학년 학년별 집계`;
       }
     }
 
+    // 💡 요구사항 1 반영: 학년별 결과 확인 탭 뷰 전환 로직 추가
     function switchView(viewName) {
       if(viewName === 'input') {
         document.getElementById('viewInput').style.display = 'block';
         document.getElementById('viewResult').style.display = 'none';
+        document.getElementById('viewGradeResult').style.display = 'none';
         document.getElementById('btnNavInput').classList.add('active');
         document.getElementById('btnNavResult').classList.remove('active');
-      } else {
+        document.getElementById('btnNavGradeResult').classList.remove('active');
+      } else if(viewName === 'result') {
         document.getElementById('viewInput').style.display = 'none';
         document.getElementById('viewResult').style.display = 'block';
+        document.getElementById('viewGradeResult').style.display = 'none';
         document.getElementById('btnNavInput').classList.remove('active');
         document.getElementById('btnNavResult').classList.add('active');
+        document.getElementById('btnNavGradeResult').classList.remove('active');
         
-        // 💡 수정된 부분: 이미 데이터를 불러온 상태라면 굳이 또 로딩하지 않음
         if (!loadedResultData) {
           loadResultData(currentMonth);
+        }
+      } else if(viewName === 'gradeResult') {
+        document.getElementById('viewInput').style.display = 'none';
+        document.getElementById('viewResult').style.display = 'none';
+        document.getElementById('viewGradeResult').style.display = 'block';
+        document.getElementById('btnNavInput').classList.remove('active');
+        document.getElementById('btnNavResult').classList.remove('active');
+        document.getElementById('btnNavGradeResult').classList.add('active');
+        
+        if (!loadedGradeResultData) {
+          loadGradeResultData(currentGradeMonth);
         }
       }
     }
@@ -512,7 +574,6 @@
     }
 
     async function loadResultData(targetMonth) {
-      // 💡 수정된 부분: 사용자에게 불필요한 '인증 확인' 문구를 없애서 체감 속도 및 오해 완화
       document.getElementById("tableContent").innerHTML = '<div style="text-align:center; padding:30px; color:#0284c7; font-weight:bold;">데이터를 불러오는 중입니다... ⏳</div>';
       
       const data = await callApi("getClassViolationData", {
@@ -523,8 +584,7 @@
       onResultDataLoaded(data);
     }
 
-     function onResultDataLoaded(data) {
-      // 수정된 부분: data.error가 아니라 !data.success 를 체크하고, data.message를 출력합니다.
+    function onResultDataLoaded(data) {
       if(!data || !data.success) {
         document.getElementById("monthTabs").innerHTML = "";
         document.getElementById("dateTabs").innerHTML = "";
@@ -559,7 +619,6 @@
       dateTabsEl.appendChild(summaryBtn);
 
       if (data.dates && data.dates.length > 0) {
-        // 첫 화면이거나 기존 선택 날짜가 없으면 무조건 'SUMMARY(합계)'를 기본으로 띄우도록 수정
         if(!currentDate || !data.dates.includes(currentDate)) {
           currentDate = 'SUMMARY';
         }
@@ -595,8 +654,9 @@
         const summary = loadedResultData.monthlySummary;
         const keys = Object.keys(summary);
 
+        // 💡 요구사항 2 반영: 문구 수정 ("🎉 해당 월에는 생활지도 관리 사항이 없습니다.")
         if(keys.length === 0) {
-          container.innerHTML = "<p style='text-align:center; padding: 20px;'>🎉 해당 월에는 위반 사례가 없습니다.</p>";
+          container.innerHTML = "<p style='text-align:center; padding: 20px;'>🎉 해당 월에는 생활지도 관리 사항이 없습니다.</p>";
           return;
         }
 
@@ -609,11 +669,10 @@
 
         keys.forEach(k => {
           const item = summary[k];
-          // 대상 학생의 횟수 및 위반 일자를 가독성 좋게 태그 형태로 출력하도록 수정
           const studentListStr = Object.keys(item.students)
             .map(sName => {
               const info = item.students[sName];
-              const dateStr = info.dates.join(", "); // 예: 08. 01., 08. 05.
+              const dateStr = info.dates.join(", ");
               return `<span style="display:inline-block; margin:2px 4px 2px 0; background:#f1f5f9; padding:4px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">
                         <strong>${sName}</strong> (${info.count}회 / 📅 ${dateStr})
                       </span>`;
@@ -663,6 +722,97 @@
         html += "</tbody></table></div>";
         container.innerHTML = html;
       }
+    }
+
+    // 💡 요구사항 1 신규 기능: 학년 단위 데이터 조회 및 렌더링 함수들
+    function changeGradeResult() {
+      const gSelect = document.getElementById("gradeSelect");
+      currentGradeResult = parseInt(gSelect.value, 10);
+      document.getElementById("displayGradeCode").innerText = `${currentGradeResult}학년 학년별 집계`;
+      loadedGradeResultData = null;
+      loadGradeResultData(currentGradeMonth);
+    }
+
+    async function loadGradeResultData(targetMonth) {
+      document.getElementById("gradeTableContent").innerHTML = '<div style="text-align:center; padding:30px; color:#0284c7; font-weight:bold;">데이터를 불러오는 중입니다... ⏳</div>';
+      
+      const data = await callApi("getGradeViolationData", {
+        grade: currentGradeResult,
+        targetMonthSheet: targetMonth
+      });
+      onGradeResultDataLoaded(data);
+    }
+
+    function onGradeResultDataLoaded(data) {
+      if(!data || !data.success) {
+        document.getElementById("gradeMonthTabs").innerHTML = "";
+        document.getElementById("gradeTableContent").innerHTML = `
+          <div style="text-align:center; padding:40px; color:#e11d48; font-weight:bold; font-size:15px; background:#fff1f2; border-radius:8px; border:1px solid #fecdd3;">
+            ${data ? data.message : "데이터를 불러오는 중 오류가 발생했습니다."}
+          </div>`;
+        return;
+      }
+
+      loadedGradeResultData = data;
+      currentGradeMonth = data.currentSheet;
+
+      const monthTabsEl = document.getElementById("gradeMonthTabs");
+      monthTabsEl.innerHTML = "";
+      data.monthSheets.forEach(m => {
+        const btn = document.createElement("button");
+        btn.className = `tab-item ${m === currentGradeMonth ? 'active' : ''}`;
+        btn.innerText = m;
+        btn.onclick = () => loadGradeResultData(m);
+        monthTabsEl.appendChild(btn);
+      });
+
+      renderGradeResultTable();
+    }
+
+    function renderGradeResultTable() {
+      const container = document.getElementById("gradeTableContent");
+      const summary = loadedGradeResultData.monthlySummary || {};
+      const keys = Object.keys(summary);
+
+      // 요구사항 2 반영: 학년 단위 집계에서도 위반 사례 없을 시 공통 메시지 적용
+      if(keys.length === 0) {
+        container.innerHTML = "<p style='text-align:center; padding: 20px;'>🎉 해당 월에는 생활지도 관리 사항이 없습니다.</p>";
+        return;
+      }
+
+      let html = `<h3 style="margin-top:5px;">📌 ${currentGradeMonth} [${currentGradeResult}학년 전체] 위반 사례별 총 집계</h3>`;
+      html += `<div class="table-responsive"><table><thead><tr>
+                <th style="width:160px;">위반 항목</th>
+                <th style="width:100px;">총 발생 건수</th>
+                <th style="width:180px;">반별 발생 건수</th>
+                <th>대상 학생 및 횟수</th>
+               </tr></thead><tbody>`;
+
+      keys.forEach(k => {
+        const item = summary[k];
+        
+        const classKeys = Object.keys(item.byClass).sort((a, b) => parseInt(a) - parseInt(b));
+        const classSummaryStr = classKeys.map(cKey => `${cKey}: ${item.byClass[cKey]}건`).join(", ");
+
+        const studentListStr = Object.keys(item.students)
+          .map(sKey => {
+            const info = item.students[sKey];
+            const dateStr = info.dates.join(", ");
+            return `<span style="display:inline-block; margin:2px 4px 2px 0; background:#f1f5f9; padding:4px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">
+                      <strong>${sKey}</strong> (${info.count}회 / 📅 ${dateStr})
+                    </span>`;
+          })
+          .join(" ");
+
+        html += `<tr>
+                  <td><strong>${k}</strong></td>
+                  <td><span class="badge-violation">${item.total}건</span></td>
+                  <td>${classSummaryStr}</td>
+                  <td style="text-align:left;">${studentListStr}</td>
+                 </tr>`;
+      });
+      html += "</tbody></table></div>";
+      container.innerHTML = html;
     }
   </script>
 </body>
