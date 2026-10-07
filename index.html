@@ -16,8 +16,10 @@
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
     
-    .header { background-color: #1e293b; color: white; padding: 18px 20px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); gap: 15px; }
-    .header h1 { margin: 0; font-size: 24px; font-weight: bold; text-align: center; }
+    /* 💡 변경 1: 상단 헤더 배경색을 연한 톤(#f1f5f9)으로 변경 및 글자색 조정 */
+    .header { background-color: #f1f5f9; color: #1e293b; padding: 18px 20px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-bottom: 1px solid #cbd5e1; gap: 15px; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: bold; text-align: center; color: #1e293b; }
+    
     .nav-btn-group { display: flex; gap: 6px; align-items: center; width: 100%; justify-content: flex-end; flex-wrap: wrap; }
     .nav-btn { padding: 6px 10px; border-radius: 4px; border: none; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; transition: 0.3s; }
     .nav-btn-main { background-color: #3b82f6; color: white; }
@@ -80,7 +82,7 @@
     <div id="g_id_signin_btn"></div>
   </div>
 
-  <!-- 메인 헤더 (요구사항 1: 학년별 결과 확인 탭 추가) -->
+  <!-- 메인 헤더 -->
   <div class="header">
     <h1>학생 생활지도 관리 시스템</h1>
     <div class="nav-btn-group">
@@ -119,14 +121,17 @@
         <select id="student" disabled><option value="">선택</option></select>
       </div>
 
+      <!-- 💡 변경 2: '교문' 및 '점심시간' 항목 추가 -->
       <div class="form-group">
         <label>교시</label>
         <select id="period">
+          <option value="교문">교문</option>
           <option value="조례">조례</option>
           <option value="1교시" selected>1교시</option>
           <option value="2교시">2교시</option>
           <option value="3교시">3교시</option>
           <option value="4교시">4교시</option>
+          <option value="점심시간">점심시간</option>
           <option value="5교시">5교시</option>
           <option value="6교시">6교시</option>
           <option value="7교시">7교시</option>
@@ -174,7 +179,7 @@
       </div>
     </div>
 
-    <!-- VIEW 3: 학년별 결과 확인 (요구사항 1 신규 화면) -->
+    <!-- VIEW 3: 학년별 결과 확인 -->
     <div id="viewGradeResult" class="card" style="display:none;">
       
       <div class="profile-card">
@@ -213,7 +218,6 @@
     let currentDate = "";
     let loadedResultData = null;
 
-    // 학년별 결과 확인용 상태 변수
     let currentGradeResult = 1;
     let currentGradeMonth = "";
     let loadedGradeResultData = null;
@@ -451,7 +455,6 @@
       if(res.success) {
         alert(res.message || "성공적으로 처리되었습니다.");
         
-        // 새로고침을 위해 캐시 초기화
         loadedResultData = null; 
         loadedGradeResultData = null;
         
@@ -471,7 +474,6 @@
       select.innerHTML = "";
       let myClassFound = null;
 
-      // 학년별 선택 드롭다운 설정
       const gradeSelect = document.getElementById("gradeSelect");
       if (gradeSelect) gradeSelect.innerHTML = "";
       const availableGrades = [...new Set(info.classList.map(c => c.grade))].sort((a,b) => a - b);
@@ -523,7 +525,6 @@
       }
     }
 
-    // 💡 요구사항 1 반영: 학년별 결과 확인 탭 뷰 전환 로직 추가
     function switchView(viewName) {
       if(viewName === 'input') {
         document.getElementById('viewInput').style.display = 'block';
@@ -654,7 +655,6 @@
         const summary = loadedResultData.monthlySummary;
         const keys = Object.keys(summary);
 
-        // 💡 요구사항 2 반영: 문구 수정 ("🎉 해당 월에는 생활지도 관리 사항이 없습니다.")
         if(keys.length === 0) {
           container.innerHTML = "<p style='text-align:center; padding: 20px;'>🎉 해당 월에는 생활지도 관리 사항이 없습니다.</p>";
           return;
@@ -695,11 +695,12 @@
           return;
         }
 
+        /* 💡 일별 결과 테이블에도 '교문' 및 '점심시간' 헤더 반영 */
         let html = `<div class="table-responsive"><table><thead><tr>
                   <th style="width:40px;">번호</th>
                   <th style="width:80px;">이름</th>
-                  <th>조례</th><th>1교시</th><th>2교시</th><th>3교시</th>
-                  <th>4교시</th><th>5교시</th><th>6교시</th><th>7교시</th>
+                  <th>교문</th><th>조례</th><th>1교시</th><th>2교시</th><th>3교시</th>
+                  <th>4교시</th><th>점심시간</th><th>5교시</th><th>6교시</th><th>7교시</th>
                  </tr></thead><tbody>`;
 
         list.forEach(s => {
@@ -708,7 +709,7 @@
                     <td>${s.num}</td>
                     <td><strong>${s.name}</strong></td>`;
           
-          ["조례","1교시","2교시","3교시","4교시","5교시","6교시","7교시"].forEach(p => {
+          ["교문","조례","1교시","2교시","3교시","4교시","점심시간","5교시","6교시","7교시"].forEach(p => {
             const v = s.periods[p];
             if(v) {
               html += `<td><span class="badge-violation">${v}</span></td>`;
@@ -724,7 +725,6 @@
       }
     }
 
-    // 💡 요구사항 1 신규 기능: 학년 단위 데이터 조회 및 렌더링 함수들
     function changeGradeResult() {
       const gSelect = document.getElementById("gradeSelect");
       currentGradeResult = parseInt(gSelect.value, 10);
@@ -774,7 +774,6 @@
       const summary = loadedGradeResultData.monthlySummary || {};
       const keys = Object.keys(summary);
 
-      // 요구사항 2 반영: 학년 단위 집계에서도 위반 사례 없을 시 공통 메시지 적용
       if(keys.length === 0) {
         container.innerHTML = "<p style='text-align:center; padding: 20px;'>🎉 해당 월에는 생활지도 관리 사항이 없습니다.</p>";
         return;
