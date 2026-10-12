@@ -398,7 +398,7 @@
       if (!isEtcChecked) etcField.value = "";
     }
 
-    async function submitAction(actionType) {
+  async function submitAction(actionType) {
       const dateRaw = document.getElementById("dateInput").value;
       const grade = document.getElementById("grade").value;
       const classNum = document.getElementById("classNum").value;
@@ -415,6 +415,7 @@
         classNum: classNum,
         num: num,
         period: period,
+        rawDate: dateRaw, // 💡 날짜 원본값 전달 추가 (자동 날짜 생성을 위함)
         date: ('0' + (d.getMonth() + 1)).slice(-2) + '. ' + ('0' + d.getDate()).slice(-2) + '.',
         targetSheet: d.getFullYear() + '. ' + ('0' + (d.getMonth() + 1)).slice(-2) + '.'
       }; 
