@@ -36,7 +36,7 @@
     
     .form-group { margin-bottom: 15px; }
     label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
-    select, input[type="text"], input[type="email"], input[type="date"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; }
+    select, input[type="text"], input[type="date"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; }
     
     .checkbox-container { border: 1px solid #ccc; border-radius: 4px; padding: 10px; max-height: 160px; overflow-y: auto; background-color: #fff; }
     .checkbox-label { display: block; margin-bottom: 8px; font-weight: normal; color: #333; cursor: pointer; font-size: 15px; }
@@ -48,9 +48,6 @@
     .btn-submit:hover { background-color: #45a049; }
     .btn-delete { background-color: #e74c3c; }
     .btn-delete:hover { background-color: #c0392b; }
-    .btn-action-small { padding: 4px 8px; border: none; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; color: white; }
-    .btn-grant { background-color: #2563eb; }
-    .btn-revoke { background-color: #dc2626; }
     
     #etcField { display: none; margin-top: 10px; }
     
@@ -93,11 +90,10 @@
     <div class="nav-btn-group">
       <button id="btnNavInput" class="nav-btn nav-btn-main active" onclick="switchView('input')">✏️ 생활지도 사항 입력</button>
       <button id="btnNavResult" class="nav-btn nav-btn-main" onclick="switchView('result')">📋 담임용 결과 확인</button>
-      <!-- 💡 '학년별 결과 확인' 메뉴 (권한이 있을 때만 노출) -->
       <button id="btnNavGradeResult" class="nav-btn nav-btn-main" onclick="switchView('gradeResult')" style="display:none;">📊 학년별 결과 확인</button>
-      <!-- 💡 '권한 관리' 메뉴 (전체 관리자에게만 노출) -->
       <button id="btnNavAdminPerm" class="nav-btn nav-btn-admin" onclick="switchView('adminPerm')" style="display:none;">🔐 권한 관리</button>
-      <a id="sheetLink" href="#" target="_blank" class="nav-btn nav-btn-sheet">⚙️ 시트 바로가기</a>
+      <!-- 💡 요구사항 2: 관리자만 보이도록 기본 숨김 처리 -->
+      <a id="sheetLink" href="#" target="_blank" class="nav-btn nav-btn-sheet" style="display:none;">⚙️ 시트 바로가기</a>
     </div>
   </div>
 
@@ -207,39 +203,13 @@
       </div>
     </div>
 
-    <!-- VIEW 4: 전체 관리자 전용 권한 관리 -->
+    <!-- VIEW 4: 전체 관리자 전용 권한 관리 (요구사항 1) -->
     <div id="viewAdminPerm" class="card" style="display:none;">
-      <h2 style="font-size:20px; color:#1e293b; margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">🔐 학년별 결과 확인 권한 관리</h2>
-      <p style="font-size:13px; color:#64748b;">전체 관리자가 교사 계정(구글 이메일)에 학년별 결과 확인 권한을 부여하거나 수거할 수 있습니다.</p>
+      <h2 style="font-size:20px; color:#1e293b; margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">🔐 담임교사 학년조회 권한 관리</h2>
+      <p style="font-size:13px; color:#64748b;">
+        전체 관리자가 구글 시트의 <strong>'담임계정'</strong> 시트에 등록된 교사들의 학년 결과 조회 권한(E열 '학년조회권한')을 설정할 수 있습니다.
+      </p>
 
-      <!-- 권한 부여 폼 -->
-      <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:15px; margin-bottom:20px;">
-        <h4 style="margin:0 0 10px 0; color:#334155;">➕ 새 권한 부여하기</h4>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <div style="flex:1; min-width:110px;">
-            <label style="font-size:12px;">학년</label>
-            <select id="permGradeSelect" style="padding:8px;">
-              <option value="1">1학년</option>
-              <option value="2">2학년</option>
-              <option value="3">3학년</option>
-            </select>
-          </div>
-          <div style="flex:2; min-width:180px;">
-            <label style="font-size:12px;">교사 이메일</label>
-            <input type="email" id="permEmailInput" placeholder="example@school.es.kr" style="padding:8px;">
-          </div>
-          <div style="flex:1; min-width:120px;">
-            <label style="font-size:12px;">교사 성명 (선택)</label>
-            <input type="text" id="permNameInput" placeholder="홍길동" style="padding:8px;">
-          </div>
-          <div style="display:flex; align-items:flex-end;">
-            <button class="btn btn-grant" style="padding:9px 16px;" onclick="addPermission()">권한 부여</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 권한 목록 테이블 -->
-      <h4 style="margin-bottom:10px; color:#334155;">📋 현재 부여된 학년별 결과 확인 권한 목록</h4>
       <div id="permTableContent" class="table-responsive">
         <div style="text-align:center; padding:20px; color:#666;">권한 정보를 불러오는 중입니다...</div>
       </div>
@@ -516,7 +486,7 @@
     function setupTeacherInfo(info) {
       if(!info) return;
 
-      // 💡 1. '학년별 결과 확인' 메뉴 버튼 노출 여부 설정 (권한 보유자만 노출)
+      // 💡 1. '학년별 결과 확인' 메뉴 버튼 노출 여부 (권한 보유자)
       const btnGradeResult = document.getElementById("btnNavGradeResult");
       if (info.canViewGradeResult) {
         btnGradeResult.style.display = "inline-block";
@@ -524,12 +494,20 @@
         btnGradeResult.style.display = "none";
       }
 
-      // 💡 2. '권한 관리' 메뉴 버튼 노출 여부 설정 (전체 관리자만 노출)
+      // 💡 2. '권한 관리' 메뉴 버튼 노출 여부 (전체 관리자)
       const btnAdminPerm = document.getElementById("btnNavAdminPerm");
       if (info.isAdmin) {
         btnAdminPerm.style.display = "inline-block";
       } else {
         btnAdminPerm.style.display = "none";
+      }
+
+      // 💡 요구사항 2: '시트 바로가기' 메뉴 버튼 노출 여부 (전체 관리자만)
+      const sheetLink = document.getElementById("sheetLink");
+      if (info.isAdmin) {
+        sheetLink.style.display = "inline-block";
+      } else {
+        sheetLink.style.display = "none";
       }
 
       if(!info.classList) return;
@@ -541,7 +519,6 @@
       const gradeSelect = document.getElementById("gradeSelect");
       if (gradeSelect) gradeSelect.innerHTML = "";
       
-      // 학년 드롭다운 권한 설정
       let availableGrades = [];
       if (info.isAdmin) {
         availableGrades = [...new Set(globalData.students.map(s => s.grade))].sort((a,b) => a - b);
@@ -880,10 +857,10 @@
       container.innerHTML = html;
     }
 
-    // 💡 전체 관리자 전용: 권한 목록 불러오기 및 관리
+    // 💡 요구사항 1: 전체 관리자 전용 - '담임계정' 시트의 교사 목록 조회 및 E열(학년조회권한) 체크 설정
     async function loadAdminPermissions() {
       const container = document.getElementById("permTableContent");
-      container.innerHTML = '<div style="text-align:center; padding:20px; color:#0284c7;">권한 목록을 불러오는 중입니다... ⏳</div>';
+      container.innerHTML = '<div style="text-align:center; padding:20px; color:#0284c7;">\'담임계정\' 시트 목록을 불러오는 중입니다... ⏳</div>';
 
       const res = await callApi("getGradePermissions");
       if (!res || !res.success) {
@@ -893,24 +870,32 @@
 
       const list = res.permissions || [];
       if (list.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:#64748b; padding:20px;">현재 학년별 결과 확인 권한이 부여된 교사가 없습니다.</div>';
+        container.innerHTML = '<div style="text-align:center; color:#64748b; padding:20px;">\'담임계정\' 시트에 등록된 교사 목록이 없습니다.</div>';
         return;
       }
 
       let html = `<table><thead><tr>
-                    <th>권한 학년</th>
-                    <th>교사 성명</th>
+                    <th style="width:110px;">소속 학반</th>
+                    <th style="width:120px;">교사 성명</th>
                     <th>구글 계정 (이메일)</th>
-                    <th>권한 수거</th>
+                    <th style="width:160px;">학년조회권한 (E열)</th>
                   </tr></thead><tbody>`;
 
       list.forEach(item => {
+        const label = (item.grade === 0 && item.classNum === 0) ? '전체 관리자' : `${item.grade}학년 ${item.classNum}반`;
+        const checked = item.hasGradePerm ? 'checked' : '';
+        const statusText = item.hasGradePerm ? 'Y (허용)' : 'N (미허용)';
+        const statusColor = item.hasGradePerm ? '#2563eb' : '#64748b';
+
         html += `<tr>
-                  <td><strong>${item.grade}학년</strong></td>
+                  <td><strong>${label}</strong></td>
                   <td>${item.teacherName || "-"}</td>
                   <td><code>${item.email}</code></td>
                   <td>
-                    <button class="btn-action-small btn-revoke" onclick="revokePermission(${item.grade}, '${item.email}')">수거 (삭제)</button>
+                    <label style="cursor:pointer; font-weight:bold; color:${statusColor}; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                      <input type="checkbox" ${checked} onchange="toggleTeacherPerm(${item.rowIndex}, this.checked)" style="transform:scale(1.3); cursor:pointer;">
+                      ${statusText}
+                    </label>
                   </td>
                 </tr>`;
       });
@@ -919,41 +904,16 @@
       container.innerHTML = html;
     }
 
-    async function addPermission() {
-      const grade = document.getElementById("permGradeSelect").value;
-      const email = document.getElementById("permEmailInput").value.trim();
-      const teacherName = document.getElementById("permNameInput").value.trim();
-
-      if (!email) return alert("교사 이메일을 입력해 주세요.");
-
-      if (!confirm(`[${grade}학년] 결과 확인 권한을 계정(${email})에 부여하시겠습니까?`)) return;
-
-      const res = await callApi("manageGradePermission", {
-        payload: { subAction: "add", grade: grade, email: email, teacherName: teacherName }
+    async function toggleTeacherPerm(rowIndex, isChecked) {
+      const res = await callApi("toggleGradePermission", {
+        payload: { rowIndex: rowIndex, hasPerm: isChecked }
       });
 
       if (res && res.success) {
-        alert(res.message);
-        document.getElementById("permEmailInput").value = "";
-        document.getElementById("permNameInput").value = "";
         loadAdminPermissions();
       } else {
-        alert("권한 부여 실패: " + (res ? res.message : "오류가 발생했습니다."));
-      }
-    }
-
-    async function revokePermission(grade, email) {
-      if (!confirm(`정말로 [${grade}학년] 계정(${email})의 학년 결과 확인 권한을 수거(삭제)하시겠습니까?`)) return;
-
-      const res = await callApi("manageGradePermission", {
-        payload: { subAction: "remove", grade: grade, email: email }
-      });
-
-      if (res && res.success) {
-        alert(res.message);
+        alert("권한 변경 실패: " + (res ? res.message : "오류가 발생했습니다."));
         loadAdminPermissions();
-      } else {
-        alert("권한 수거 실패: " + (res ? res.message : "오류가 발생했습니다."));
       }
     }
   </script>
