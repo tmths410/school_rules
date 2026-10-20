@@ -16,7 +16,6 @@
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
     
-    /* 💡 변경 1: 상단 헤더 배경색을 연한 톤(#f1f5f9)으로 변경 및 글자색 조정 */
     .header { background-color: #f1f5f9; color: #1e293b; padding: 18px 20px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-bottom: 1px solid #cbd5e1; gap: 15px; }
     .header h1 { margin: 0; font-size: 24px; font-weight: bold; text-align: center; color: #1e293b; }
     
@@ -88,7 +87,10 @@
     <div class="nav-btn-group">
       <button id="btnNavInput" class="nav-btn nav-btn-main active" onclick="switchView('input')">✏️ 생활지도 사항 입력</button>
       <button id="btnNavResult" class="nav-btn nav-btn-main" onclick="switchView('result')">📋 담임용 결과 확인</button>
-      <button id="btnNavGradeResult" class="nav-btn nav-btn-main" onclick="switchView('gradeResult')">📊 학년별 결과 확인</button>
+      <!-- 💡 권한 여부에 따라 제어되도록 display:none 설정 -->
+      <button id="btnNavGradeResult" class="nav-btn nav-btn-main" style="display:none;" onclick="switchView('gradeResult')">📊 학년별 결과 확인</button>
+      <!-- 관리자 전용 권한 설정 버튼 -->
+      <button id="btnNavPermission" class="nav-btn" style="background-color: #8b5cf6; color: white; display:none;" onclick="switchView('permission')">⚙️ 권한 관리</button>
       <a id="sheetLink" href="#" target="_blank" class="nav-btn nav-btn-sheet">⚙️ 관리자</a>
     </div>
   </div>
@@ -121,7 +123,6 @@
         <select id="student" disabled><option value="">선택</option></select>
       </div>
 
-      <!-- 💡 변경 2: '교문' 및 '점심시간' 항목 추가 -->
       <div class="form-group">
         <label>교시</label>
         <select id="period">
@@ -202,6 +203,25 @@
       </div>
     </div>
 
+    <!-- VIEW 4: 권한 관리 (전체 관리자 전용 신규 화면) -->
+    <div id="viewPermission" class="card" style="display:none;">
+      <div class="profile-card" style="border-left-color: #8b5cf6; background: #f3e8ff;">
+        <div>
+          <span class="class-info" style="color: #6b21a8;">⚙️ 담임 계정 권한 관리</span>
+          <span style="font-size:13px; color:#555;"> (전체 관리자 전용)</span>
+        </div>
+      </div>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">
+        각 담임 교사의 <strong>'학년별 결과 확인'</strong> 메뉴 접근 권한을 부여(ON)하거나 수거(OFF)할 수 있습니다.
+      </p>
+      <div id="permissionTableContainer">
+        <div style="text-align:center; padding:30px; color:#666;">권한 정보를 불러오는 중입니다...</div>
+      </div>
+      <div class="btn-group" style="margin-top:20px;">
+        <button class="btn" style="background-color: #8b5cf6;" onclick="saveAccountPermissions()">💾 권한 변경사항 저장하기</button>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -261,6 +281,8 @@
           loadResultData();
         } else if (document.getElementById('viewGradeResult').style.display !== 'none') {
           loadGradeResultData();
+        } else if (document.getElementById('viewPermission').style.display !== 'none') {
+          loadPermissionData();
         }
       } else {
         alert(res ? res.message : "구글 로그인 인증에 실패했습니다.");
@@ -278,6 +300,8 @@
         loadResultData();
       } else if (document.getElementById('viewGradeResult').style.display !== 'none') {
         loadGradeResultData();
+      } else if (document.getElementById('viewPermission').style.display !== 'none') {
+        loadPermissionData();
       }
     }
 
@@ -398,7 +422,7 @@
       if (!isEtcChecked) etcField.value = "";
     }
 
-  async function submitAction(actionType) {
+    async function submitAction(actionType) {
       const dateRaw = document.getElementById("dateInput").value;
       const grade = document.getElementById("grade").value;
       const classNum = document.getElementById("classNum").value;
@@ -415,7 +439,6 @@
         classNum: classNum,
         num: num,
         period: period,
-        rawDate: dateRaw, // 💡 날짜 원본값 전달 추가 (자동 날짜 생성을 위함)
         date: ('0' + (d.getMonth() + 1)).slice(-2) + '. ' + ('0' + d.getDate()).slice(-2) + '.',
         targetSheet: d.getFullYear() + '. ' + ('0' + (d.getMonth() + 1)).slice(-2) + '.'
       }; 
@@ -470,6 +493,22 @@
 
     function setupTeacherInfo(info) {
       if(!info || !info.classList) return;
+
+      // 💡 학년별 결과 확인 메뉴 제어 (권한이 부여된 사용자만 노출)
+      const gradeResultBtn = document.getElementById("btnNavGradeResult");
+      if (info.canViewGradeResult) {
+        gradeResultBtn.style.display = "inline-block";
+      } else {
+        gradeResultBtn.style.display = "none";
+      }
+
+      // 전체 관리자인 경우 '⚙️ 권한 관리' 메뉴 노출
+      const permBtn = document.getElementById("btnNavPermission");
+      if (info.isAdmin) {
+        permBtn.style.display = "inline-block";
+      } else {
+        permBtn.style.display = "none";
+      }
 
       const select = document.getElementById("classSelect");
       select.innerHTML = "";
@@ -527,35 +566,33 @@
     }
 
     function switchView(viewName) {
+      const views = ['viewInput', 'viewResult', 'viewGradeResult', 'viewPermission'];
+      const btns = ['btnNavInput', 'btnNavResult', 'btnNavGradeResult', 'btnNavPermission'];
+      
+      views.forEach(v => {
+        const el = document.getElementById(v);
+        if (el) el.style.display = 'none';
+      });
+      btns.forEach(b => {
+        const el = document.getElementById(b);
+        if (el) el.classList.remove('active');
+      });
+
       if(viewName === 'input') {
         document.getElementById('viewInput').style.display = 'block';
-        document.getElementById('viewResult').style.display = 'none';
-        document.getElementById('viewGradeResult').style.display = 'none';
         document.getElementById('btnNavInput').classList.add('active');
-        document.getElementById('btnNavResult').classList.remove('active');
-        document.getElementById('btnNavGradeResult').classList.remove('active');
       } else if(viewName === 'result') {
-        document.getElementById('viewInput').style.display = 'none';
         document.getElementById('viewResult').style.display = 'block';
-        document.getElementById('viewGradeResult').style.display = 'none';
-        document.getElementById('btnNavInput').classList.remove('active');
         document.getElementById('btnNavResult').classList.add('active');
-        document.getElementById('btnNavGradeResult').classList.remove('active');
-        
-        if (!loadedResultData) {
-          loadResultData(currentMonth);
-        }
+        if (!loadedResultData) loadResultData(currentMonth);
       } else if(viewName === 'gradeResult') {
-        document.getElementById('viewInput').style.display = 'none';
-        document.getElementById('viewResult').style.display = 'none';
         document.getElementById('viewGradeResult').style.display = 'block';
-        document.getElementById('btnNavInput').classList.remove('active');
-        document.getElementById('btnNavResult').classList.remove('active');
         document.getElementById('btnNavGradeResult').classList.add('active');
-        
-        if (!loadedGradeResultData) {
-          loadGradeResultData(currentGradeMonth);
-        }
+        if (!loadedGradeResultData) loadGradeResultData(currentGradeMonth);
+      } else if(viewName === 'permission') {
+        document.getElementById('viewPermission').style.display = 'block';
+        document.getElementById('btnNavPermission').classList.add('active');
+        loadPermissionData();
       }
     }
 
@@ -696,7 +733,6 @@
           return;
         }
 
-        /* 💡 일별 결과 테이블에도 '교문' 및 '점심시간' 헤더 반영 */
         let html = `<div class="table-responsive"><table><thead><tr>
                   <th style="width:40px;">번호</th>
                   <th style="width:80px;">이름</th>
@@ -813,6 +849,68 @@
       });
       html += "</tbody></table></div>";
       container.innerHTML = html;
+    }
+
+    async function loadPermissionData() {
+      const container = document.getElementById("permissionTableContainer");
+      container.innerHTML = '<div style="text-align:center; padding:30px; color:#8b5cf6; font-weight:bold;">권한 목록을 가져오는 중입니다... ⏳</div>';
+
+      const res = await callApi("getAccountPermissions");
+      if (!res || !res.success) {
+        container.innerHTML = `<div style="text-align:center; padding:30px; color:#e11d48; font-weight:bold;">${res ? res.message : "권한 목록을 불러오지 못했습니다."}</div>`;
+        return;
+      }
+
+      let html = `<div class="table-responsive"><table><thead><tr>
+                    <th style="width:100px;">소속 학반</th>
+                    <th style="width:110px;">교사 성함</th>
+                    <th>구글 이메일 계정</th>
+                    <th style="width:180px;">'학년별 결과' 접근 권한</th>
+                   </tr></thead><tbody>`;
+
+      res.permissions.forEach(p => {
+        const classLabel = (p.grade === 0 && p.classNum === 0) ? "전체 관리자" : (p.classNum === 0 ? `${p.grade}학년 부장` : `${p.grade}학년 ${p.classNum}반`);
+        const isChecked = (p.gradePerm === 'Y') ? 'checked' : '';
+        
+        html += `<tr>
+                  <td><strong>${classLabel}</strong></td>
+                  <td>${p.teacherName}</td>
+                  <td style="text-align:left;">${p.email}</td>
+                  <td>
+                    <label style="cursor:pointer; font-weight:bold; color: ${p.gradePerm === 'Y' ? '#0284c7' : '#ef4444'};">
+                      <input type="checkbox" class="perm-checkbox" data-row="${p.rowIndex}" ${isChecked} style="transform: scale(1.3); margin-right:6px;">
+                      ${p.gradePerm === 'Y' ? '허용 (ON)' : '차단 (OFF)'}
+                    </label>
+                  </td>
+                 </tr>`;
+      });
+
+      html += "</tbody></table></div>";
+      container.innerHTML = html;
+    }
+
+    async function saveAccountPermissions() {
+      const checkboxes = document.querySelectorAll(".perm-checkbox");
+      if (checkboxes.length === 0) return alert("저장할 권한 정보가 없습니다.");
+
+      const permissionsList = [];
+      checkboxes.forEach(cb => {
+        const rowIndex = parseInt(cb.getAttribute("data-row"), 10);
+        permissionsList.push({
+          rowIndex: rowIndex,
+          gradePerm: cb.checked ? 'Y' : 'N'
+        });
+      });
+
+      if (!confirm("변경된 학년 결과 조회 권한을 저장하시겠습니까?")) return;
+
+      const res = await callApi("updateAccountPermissions", { permissionsList: permissionsList });
+      if (res && res.success) {
+        alert(res.message || "성공적으로 저장되었습니다.");
+        loadPermissionData();
+      } else {
+        alert("저장 실패: " + (res ? res.message : "오류가 발생했습니다."));
+      }
     }
   </script>
 </body>
